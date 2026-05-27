@@ -1,0 +1,239 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ 'Редактирование' if vacancy else 'Создание' }} вакансии | Админ-панель{% endblock %}
+
+{% block head %}
+<!-- EasyMDE Markdown Editor -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+<style>
+    .EasyMDEContainer .CodeMirror {
+        border-radius: 0.75rem;
+        border-color: #e5e7eb;
+    }
+
+    .EasyMDEContainer .editor-toolbar {
+        border-radius: 0.75rem 0.75rem 0 0;
+        border-color: #e5e7eb;
+    }
+
+    .EasyMDEContainer .editor-toolbar button {
+        color: #6b7280;
+    }
+
+    .EasyMDEContainer .editor-toolbar button:hover {
+        background: #f3f4f6;
+    }
+
+    .EasyMDEContainer .editor-toolbar button.active {
+        background: #dbeafe;
+        color: #2563eb;
+    }
+
+    .editor-preview {
+        background: #f9fafb;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('admin.vacancies') }}" class="text-blue-500 hover:text-blue-600">
+        <i class="fas fa-arrow-left mr-2"></i>Назад к списку
+    </a>
+</div>
+
+<div class="bg-white rounded-2xl shadow-sm p-6">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">
+        {{ 'Редактирование вакансии' if vacancy else 'Новая вакансия' }}
+    </h1>
+
+    <form method="POST" class="space-y-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Название вакансии *</label>
+                <input type="text" name="title" value="{{ vacancy.title if vacancy else '' }}" required
+                    placeholder="Например: Frontend-разработчик"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Отдел</label>
+                <select name="department" id="department-select"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+                    <option value="">Выберите отдел</option>
+                    {% for dept in departments %}
+                    <option value="{{ dept }}" {{ 'selected' if vacancy and vacancy.department==dept else '' }}>
+                        {{ dept }}
+                    </option>
+                    {% endfor %}
+                    <option value="__custom__">+ Указать другой отдел</option>
+                </select>
+                <input type="text" name="department_custom" id="department-custom" placeholder="Введите название отдела"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none mt-2 hidden">
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+                <i class="fas fa-file-alt text-blue-500 mr-1"></i>Описание
+            </label>
+            <textarea name="description" id="editor-description">{{ vacancy.description if vacancy else '' }}</textarea>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+                <i class="fas fa-check-circle text-green-500 mr-1"></i>Требования
+            </label>
+            <textarea name="requirements"
+                id="editor-requirements">{{ vacancy.requirements if vacancy else '' }}</textarea>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+                <i class="fas fa-gift text-purple-500 mr-1"></i>Условия
+            </label>
+            <textarea name="conditions" id="editor-conditions">{{ vacancy.conditions if vacancy else '' }}</textarea>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Зарплата от (₽)</label>
+                <input type="number" name="salary_from" value="{{ vacancy.salary_from if vacancy else '' }}"
+                    placeholder="50000"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Зарплата до (₽)</label>
+                <input type="number" name="salary_to" value="{{ vacancy.salary_to if vacancy else '' }}"
+                    placeholder="100000"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Тип занятости</label>
+                <select name="employment_type"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+                    <option value="full-time" {{ 'selected' if vacancy and vacancy.employment_type=='full-time' else ''
+                        }}>
+                        Полная занятость
+                    </option>
+                    <option value="part-time" {{ 'selected' if vacancy and vacancy.employment_type=='part-time' else ''
+                        }}>
+                        Частичная занятость
+                    </option>
+                    <option value="remote" {{ 'selected' if vacancy and vacancy.employment_type=='remote' else '' }}>
+                        Удалённая работа
+                    </option>
+                </select>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Email для связи</label>
+                <input type="email" name="contact_email" value="{{ vacancy.contact_email if vacancy else '' }}"
+                    placeholder="hr@company.ru"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Телефон для связи</label>
+                <input type="text" name="contact_phone" value="{{ vacancy.contact_phone if vacancy else '' }}"
+                    placeholder="+7 (999) 123-45-67"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+        </div>
+
+        <div class="flex items-center">
+            <input type="checkbox" name="is_active" id="is_active" {{ 'checked' if not vacancy or vacancy.is_active
+                else '' }} class="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500">
+            <label for="is_active" class="ml-2 text-sm text-gray-700">Активная вакансия (отображается на
+                портале)</label>
+        </div>
+
+        <div class="flex justify-end space-x-4 pt-4 border-t">
+            <a href="{{ url_for('admin.vacancies') }}"
+                class="px-6 py-2 border border-gray-300 rounded-xl hover:bg-gray-50">Отмена</a>
+            <button type="submit" class="px-6 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">
+                <i class="fas fa-save mr-2"></i>{{ 'Сохранить' if vacancy else 'Создать' }}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Настройки редактора
+        const editorConfig = {
+            spellChecker: false,
+            status: false,
+            toolbar: [
+                'bold', 'italic', 'strikethrough', '|',
+                'heading-1', 'heading-2', 'heading-3', '|',
+                'unordered-list', 'ordered-list', '|',
+                'link', 'quote', 'code', '|',
+                'preview', 'side-by-side', 'fullscreen', '|',
+                'guide'
+            ],
+            placeholder: 'Поддерживается Markdown разметка...',
+            minHeight: '150px'
+        };
+
+        // Инициализация редакторов
+        new EasyMDE({
+            ...editorConfig,
+            element: document.getElementById('editor-description'),
+            placeholder: 'Опишите вакансию и основные задачи...'
+        });
+
+        new EasyMDE({
+            ...editorConfig,
+            element: document.getElementById('editor-requirements'),
+            placeholder: 'Укажите требования к кандидату...\n\n- Опыт работы от 2 лет\n- Знание JavaScript'
+        });
+
+        new EasyMDE({
+            ...editorConfig,
+            element: document.getElementById('editor-conditions'),
+            placeholder: 'Что предлагаете кандидату...\n\n- Официальное оформление\n- ДМС'
+        });
+
+        // Выбор отдела
+        const select = document.getElementById('department-select');
+        const customInput = document.getElementById('department-custom');
+
+        select.addEventListener('change', function () {
+            if (this.value === '__custom__') {
+                customInput.classList.remove('hidden');
+                customInput.required = true;
+                customInput.name = 'department';
+                select.name = '';
+            } else {
+                customInput.classList.add('hidden');
+                customInput.required = false;
+                customInput.name = 'department_custom';
+                select.name = 'department';
+            }
+        });
+
+        // Если текущий отдел не в списке
+        {% if vacancy and vacancy.department %}
+        const currentDept = "{{ vacancy.department }}";
+        let found = false;
+        for (let option of select.options) {
+            if (option.value === currentDept) {
+                found = true;
+                break;
+            }
+        }
+        if (!found && currentDept) {
+            select.value = '__custom__';
+            customInput.value = currentDept;
+            customInput.classList.remove('hidden');
+            customInput.name = 'department';
+            select.name = '';
+        }
+        {% endif %}
+    });
+</script>
+{% endblock %}

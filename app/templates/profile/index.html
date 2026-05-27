@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Профиль{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">Мой профиль</h1>
+
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-6 text-white">
+            <div class="flex items-center space-x-4">
+                <img src="{{ url_for('static', filename=current_user.photo|user_photo) }}"
+                    class="w-20 h-20 rounded-full object-cover border-4 border-white/30">
+                <div>
+                    <h2 class="text-2xl font-bold">{{ current_user.full_name }}</h2>
+                    <p class="text-blue-100">{{ current_user.position or 'Должность не указана' }}</p>
+                    {% if current_user.role %}
+                    <span class="inline-block mt-2 px-3 py-1 bg-white/20 rounded-full text-sm">{{
+                        current_user.role.display_name }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Info -->
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Email</p>
+                    <p class="text-gray-800">{{ current_user.email }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Телефон</p>
+                    <p class="text-gray-800">{{ current_user.phone or '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Отдел</p>
+                    <p class="text-gray-800">{{ current_user.department or '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Внутренний телефон</p>
+                    <p class="text-gray-800">{{ current_user.internal_phone or '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Расположение</p>
+                    <p class="text-gray-800">{{ current_user.location or '-' }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500 mb-1">Тип аккаунта</p>
+                    <p class="text-gray-800">{{ 'LDAP' if current_user.is_ldap_user else 'Локальный' }}</p>
+                </div>
+            </div>
+
+            {% if current_user.is_ldap_user %}
+            <div class="mt-6 p-4 bg-blue-50 rounded-xl">
+                <p class="text-sm text-blue-700">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Ваш аккаунт синхронизирован с LDAP. Основные данные обновляются автоматически.
+                </p>
+            </div>
+            {% endif %}
+
+            <div class="mt-6 pt-6 border-t flex flex-wrap gap-3">
+                <a href="{{ url_for('profile.edit') }}"
+                    class="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">
+                    <i class="fas fa-edit mr-2"></i>Редактировать
+                </a>
+                {% if not current_user.is_ldap_user %}
+                <a href="{{ url_for('profile.change_password') }}"
+                    class="px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50">
+                    <i class="fas fa-key mr-2"></i>Сменить пароль
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

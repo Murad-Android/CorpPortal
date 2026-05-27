@@ -1,0 +1,128 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Сервисы{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">
+        <i class="fas fa-server text-blue-500 mr-2"></i>Сервисы
+    </h1>
+    {% if current_user.is_admin or current_user.has_permission('testing_services_create') %}
+    <a href="{{ url_for('testing.create') }}"
+        class="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors">
+        <i class="fas fa-plus mr-2"></i>Добавить сервис
+    </a>
+    {% endif %}
+</div>
+
+{% if services %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for service in services %}
+    <div
+        class="bg-white rounded-xl shadow-sm p-5 {% if not service.is_active %}opacity-60{% endif %} hover:shadow-md transition-shadow">
+        <div class="flex items-start justify-between mb-3">
+            <div class="flex items-start space-x-3">
+                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-{{ service.icon or 'server' }} text-blue-500"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="font-semibold text-gray-800 truncate">{{ service.name }}</h3>
+                    <div class="flex items-center space-x-2 mt-1">
+                        {% if service.is_active %}
+                        <span class="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs">Активен</span>
+                        {% else %}
+                        <span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs">Выключен</span>
+                        {% endif %}
+                        {% if service.environment %}
+                        <span class="px-2 py-0.5 text-xs rounded
+                            {% if service.environment == 'prod' %}bg-red-100 text-red-700
+                            {% elif service.environment == 'staging' %}bg-yellow-100 text-yellow-700
+                            {% elif service.environment == 'dev' %}bg-blue-100 text-blue-700
+                            {% else %}bg-gray-100 text-gray-700{% endif %}">
+                            {{ service.environment|upper }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if current_user.is_admin or current_user.has_permission('testing_services_toggle') %}
+            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                <input type="checkbox" class="sr-only peer" {% if service.is_active %}checked{% endif %}
+                    onchange="toggleService({{ service.id }}, this)">
+                <div
+                    class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600">
+                </div>
+            </label>
+            {% endif %}
+        </div>
+
+        <!-- Превью полей -->
+        {% set custom_fields = service.get_custom_fields() %}
+        {% if custom_fields %}
+        <div class="space-y-1 text-sm text-gray-600 mb-3">
+            {% for field in custom_fields[:3] %}
+            <div class="flex">
+                <span class="text-gray-400 w-24 truncate flex-shrink-0">{{ field.name }}:</span>
+                <span class="truncate flex-1 font-mono text-xs">
+                    {% if field.type == 'password' %}••••••••
+                    {% else %}{{ field.value }}{% endif %}
+                </span>
+            </div>
+            {% endfor %}
+            {% if custom_fields|length > 3 %}
+            <div class="text-gray-400 text-xs">+{{ custom_fields|length - 3 }} ещё</div>
+            {% endif %}
+        </div>
+        {% elif service.description %}
+        <p class="text-sm text-gray-600 mb-3 line-clamp-2">{{ service.description|striptags|truncate(80) }}</p>
+        {% endif %}
+
+        <div class="flex space-x-2">
+            <a href="{{ url_for('testing.view', id=service.id) }}"
+                class="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-center text-sm transition-colors">
+                <i class="fas fa-eye mr-1"></i>Открыть
+            </a>
+            {% if service.url and service.is_active %}
+            <a href="{{ service.url }}" target="_blank" onclick="logAccess({{ service.id }})"
+                class="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                title="Перейти">
+                <i class="fas fa-external-link-alt"></i>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-xl shadow-sm p-12 text-center">
+    <i class="fas fa-server text-4xl text-gray-300 mb-4"></i>
+    <p class="text-gray-500 mb-4">Сервисов пока нет</p>
+    {% if current_user.is_admin or current_user.has_permission('testing_services_create') %}
+    <a href="{{ url_for('testing.create') }}"
+        class="inline-block px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors">
+        <i class="fas fa-plus mr-2"></i>Создать первый сервис
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+
+<script>
+    function toggleService(id, checkbox) {
+        fetch(`/testing/${id}/toggle`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) location.reload();
+                else { alert('Ошибка: ' + data.error); checkbox.checked = !checkbox.checked; }
+            })
+            .catch(() => { alert('Ошибка'); checkbox.checked = !checkbox.checked; });
+    }
+
+    function logAccess(id) {
+        fetch(`/testing/${id}/access`, { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token() }}' } });
+    }
+</script>
+{% endblock %}

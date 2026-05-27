@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="ru">
+{% set appearance = get_site_appearance() %}
+{% set active_decorations = get_active_decorations() %}
+{% set decoration_types = [] %}
+{% set ns = namespace(garland_position='above', garland_bg_color='', cursor_type='default') %}
+{% for d in active_decorations %}
+{% set _ = decoration_types.append(d.decoration_type) %}
+{% if d.decoration_type == 'garland' %}
+{% set ns.garland_position = d.position or 'above' %}
+{% set ns.garland_bg_color = d.get_settings().get('bg_color', '') %}
+{% endif %}
+{% if d.get_settings().get('cursor_type') and ns.cursor_type == 'default' %}
+{% set ns.cursor_type = d.get_settings().get('cursor_type') %}
+{% endif %}
+{% endfor %}
+{% set is_birthday_today = current_user.birthday and current_user.birthday.month == now().month and
+current_user.birthday.day == now().day %}
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ appearance.site_name }}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='fonts/inter.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='fontawesome/css/all.min.css') }}">
+    <style>
+        * {
+            font-family: 'Inter', sans-serif
+        }
+
+        body {
+            background-color: #f1f5f9;
+            min-height: 100vh
+        }
+
+        #garland-decoration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 40px;
+            z-index: 10000;
+            pointer-events: none;
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start;
+            padding-top: 5px
+        }
+
+        #garland-decoration.overlay {
+            z-index: 10000
+        }
+
+        #garland-decoration.above {
+            z-index: 50
+        }
+
+        .garland-bulb {
+            width: 14px;
+            height: 20px;
+            border-radius: 50% 50% 50% 50%/60% 60% 40% 40%;
+            position: relative;
+            animation: glow 1s ease-in-out infinite;
+            filter: drop-shadow(0 0 8px currentColor)
+        }
+
+        .garland-bulb::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 10px;
+            background: #2d3748;
+            border-radius: 2px
+        }
+
+        .garland-bulb::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%
+        }
+
+        .garland-bulb:nth-child(5n+1) {
+            background: radial-gradient(circle at 30% 30%, #ff8a8a, #ff4444);
+            color: #ff4444;
+            animation-delay: 0s
+        }
+
+        .garland-bulb:nth-child(5n+2) {
+            background: radial-gradient(circle at 30% 30%, #8affff, #00d4d4);
+            color: #00d4d4;
+            animation-delay: 0.2s
+        }
+
+        .garland-bulb:nth-child(5n+3) {
+            background: radial-gradient(circle at 30% 30%, #ffff8a, #ffcc00);
+            color: #ffcc00;
+            animation-delay: 0.4s
+        }
+
+        .garland-bulb:nth-child(5n+4) {
+            background: radial-gradient(circle at 30% 30%, #8aff8a, #44ff44);
+            color: #44ff44;
+            animation-delay: 0.6s
+        }
+
+        .garland-bulb:nth-child(5n+5) {
+            background: radial-gradient(circle at 30% 30%, #ff8aff, #ff44ff);
+            color: #ff44ff;
+            animation-delay: 0.8s
+        }
+
+        @keyframes glow {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1)
+            }
+
+            50% {
+                opacity: 0.3;
+                transform: scale(0.95)
+            }
+        }
+
+        .newyear-balls {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            z-index: 9998;
+            pointer-events: none;
+            display: flex;
+            justify-content: space-around;
+            padding: 0 20px;
+            background: transparent
+        }
+
+        .ny-ball {
+            width: 35px;
+            height: 42px;
+            border-radius: 50%;
+            position: relative;
+            top: 5px;
+            animation: swing-ball 3s ease-in-out infinite;
+            transform-origin: top center;
+            cursor: pointer;
+            pointer-events: auto;
+            filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3))
+        }
+
+        .ny-ball::before {
+            content: '';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 12px;
+            background: linear-gradient(180deg, #888, #aaa)
+        }
+
+        .ny-ball::after {
+            content: '';
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 5px;
+            background: linear-gradient(180deg, #ffd700, #ffaa00);
+            border-radius: 2px
+        }
+
+        .ny-ball:nth-child(6n+1) {
+            background: radial-gradient(circle at 30% 30%, #ff6b6b, #c0392b)
+        }
+
+        .ny-ball:nth-child(6n+2) {
+            background: radial-gradient(circle at 30% 30%, #5dade2, #2980b9);
+            width: 30px;
+            height: 36px
+        }
+
+        .ny-ball:nth-child(6n+3) {
+            background: radial-gradient(circle at 30% 30%, #f4d03f, #f39c12)
+        }
+
+        .ny-ball:nth-child(6n+4) {
+            background: radial-gradient(circle at 30% 30%, #58d68d, #27ae60);
+            width: 38px;
+            height: 46px
+        }
+
+        .ny-ball:nth-child(6n+5) {
+            background: radial-gradient(circle at 30% 30%, #af7ac5, #8e44ad);
+            width: 32px;
+            height: 38px
+        }
+
+        .ny-ball:nth-child(6n+6) {
+            background: radial-gradient(circle at 30% 30%, #ec7063, #c0392b)
+        }
+
+        .ny-ball:nth-child(odd) {
+            animation-delay: 0s
+        }
+
+        .ny-ball:nth-child(even) {
+            animation-delay: 1.5s
+        }
+
+        @keyframes swing-ball {
+
+            0%,
+            100% {
+                transform: rotate(-5deg)
+            }
+
+            50% {
+                transform: rotate(5deg)
+            }
+        }
+
+        .ny-ball:hover {
+            animation: swing-ball-fast 0.4s ease-in-out
+        }
+
+        @keyframes swing-ball-fast {
+
+            0%,
+            100% {
+                transform: rotate(0deg)
+            }
+
+            25% {
+                transform: rotate(-15deg)
+            }
+
+            75% {
+                transform: rotate(15deg)
+            }
+        }
+
+        .snowflake {
+            position: fixed;
+            top: -10px;
+            z-index: 9999;
+            color: white;
+            font-size: 1em;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+            animation: fall linear infinite;
+            pointer-events: none
+        }
+
+        @keyframes fall {
+            to {
+                transform: translateY(100vh) rotate(360deg)
+            }
+        }
+
+        .heart {
+            position: fixed;
+            z-index: 9999;
+            color: #ef4444;
+            animation: float-up 4s ease-out infinite;
+            pointer-events: none
+        }
+
+        @keyframes float-up {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1)
+            }
+
+            100% {
+                opacity: 0;
+                transform: translateY(-100vh) scale(0.5)
+            }
+        }
+
+        .confetti {
+            position: fixed;
+            top: -10px;
+            z-index: 9999;
+            width: 10px;
+            height: 10px;
+            animation: confetti-fall linear infinite;
+            pointer-events: none
+        }
+
+        @keyframes confetti-fall {
+            to {
+                transform: translateY(100vh) rotate(720deg)
+            }
+        }
+
+        .birthday-confetti {
+            position: fixed;
+            z-index: 99999;
+            pointer-events: none;
+            animation: birthday-fall linear forwards
+        }
+
+        @keyframes birthday-fall {
+            0% {
+                opacity: 1;
+                transform: translateY(0) rotate(0deg)
+            }
+
+            100% {
+                opacity: 0;
+                transform: translateY(100vh) rotate(720deg)
+            }
+        }
+
+        .card-hover {
+            transition: all 0.3s ease
+        }
+
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1)
+        }
+
+        .toast {
+            animation: toastIn 0.3s ease-out
+        }
+
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0)
+            }
+        }
+
+        .mobile-menu {
+            transition: transform 0.3s ease
+        }
+
+        .mobile-menu.open {
+            transform: translateX(0)
+        }
+
+        .backdrop {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px)
+        }
+
+        .notification-badge {
+            animation: pulse 2s infinite
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1)
+            }
+
+            50% {
+                transform: scale(1.1)
+            }
+        }
+
+        /* Цветочки */
+        .flower {
+            position: fixed;
+            top: -20px;
+            z-index: 9999;
+            pointer-events: none;
+            animation: flower-fall linear infinite
+        }
+
+        @keyframes flower-fall {
+            to {
+                transform: translateY(100vh) rotate(360deg)
+            }
+        }
+
+        /* Осенние листья */
+        .leaf {
+            position: fixed;
+            top: -20px;
+            z-index: 9999;
+            pointer-events: none;
+            animation: leaf-fall linear infinite
+        }
+
+        @keyframes leaf-fall {
+            to {
+                transform: translateY(100vh) rotate(720deg) translateX(50px)
+            }
+        }
+
+        /* Звёздочки */
+        .star-particle {
+            position: fixed;
+            z-index: 9999;
+            pointer-events: none;
+            animation: star-twinkle 2s ease-in-out infinite
+        }
+
+        @keyframes star-twinkle {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1)
+            }
+
+            50% {
+                opacity: 0.3;
+                transform: scale(0.5)
+            }
+        }
+
+        /* Кастомные курсоры */
+        .cursor-snowflake {
+            cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><text y='24' font-size='24'>❄️</text></svg>") 16 16, auto
+        }
+
+        .cursor-flower {
+            cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><text y='24' font-size='24'>🌸</text></svg>") 16 16, auto
+        }
+
+        .cursor-heart {
+            cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><text y='24' font-size='24'>❤️</text></svg>") 16 16, auto
+        }
+
+        .cursor-star {
+            cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><text y='24' font-size='24'>⭐</text></svg>") 16 16, auto
+        }
+
+        .cursor-leaf {
+            cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><text y='24' font-size='24'>🍂</text></svg>") 16 16, auto
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body class="bg-slate-100 {% if ns.cursor_type != 'default' %}cursor-{{ ns.cursor_type }}{% endif %}">
+
+    {% if 'garland' in decoration_types %}
+    <div id="garland-decoration" class="{{ ns.garland_position }}"
+        style="background: {% if ns.garland_bg_color %}linear-gradient(180deg, {{ ns.garland_bg_color }} 0%, transparent 100%){% else %}transparent{% endif %};">
+        {% for i in range(40) %}<div class="garland-bulb"></div>{% endfor %}
+    </div>
+    {% endif %}
+    {% if 'newyear_balls' in decoration_types %}<div class="newyear-balls">{% for i in range(25) %}<div class="ny-ball">
+        </div>{% endfor %}</div>{% endif %}
+
+    <header class="fixed left-0 right-0 text-white shadow-lg z-40"
+        style="background: linear-gradient(135deg, {{ appearance.primary_color }} 0%, {{ appearance.secondary_color }} 100%); top: {% if 'garland' in decoration_types and ns.garland_position == 'above' %}40px{% elif 'newyear_balls' in decoration_types %}80px{% else %}0{% endif %};">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <a href="{{ url_for('main.index') }}" class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-md"><i
+                            class="fas fa-building text-blue-600 text-lg"></i></div>
+                    <span class="text-xl font-bold hidden sm:block">{{ appearance.site_name }}</span>
+                </a>
+                <nav class="hidden lg:flex items-center space-x-1">
+                    {% set menu_items = get_menu_items() %}
+                    {% for item in menu_items.visible %}<a href="{{ url_for(item.url) }}"
+                        class="px-4 py-2 rounded-lg hover:bg-white/10"><i class="fas fa-{{ item.icon }} mr-2"></i>{{
+                        item.title }}</a>{% endfor %}
+                    {% if menu_items.hidden %}
+                    <div class="relative" x-data="{ open: false }">
+                        <button @click="open = !open"
+                            class="px-4 py-2 rounded-lg hover:bg-white/10 flex items-center"><i
+                                class="fas fa-ellipsis-h mr-2"></i>Ещё<i
+                                class="fas fa-chevron-down ml-2 text-xs"></i></button>
+                        <div x-show="open" @click.away="open = false" x-transition
+                            class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl py-2 text-gray-700">
+                            {% for item in menu_items.hidden %}<a href="{{ url_for(item.url) }}"
+                                class="block px-4 py-2 hover:bg-gray-100"><i
+                                    class="fas fa-{{ item.icon }} mr-2 text-gray-400"></i>{{ item.title }}</a>{% endfor
+                            %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </nav>
+                <div class="flex items-center space-x-2">
+                    <div class="relative"><a href="{{ url_for('messenger.index') }}"
+                            class="relative w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30"
+                            title="Сообщения"><i class="fas fa-comment-dots"></i><span id="messenger-badge"
+                                class="hidden absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center notification-badge">0</span></a>
+                    </div>
+                    <div class="relative" x-data="{ open: false }">
+                        <button @click="open = !open; if(open) loadNotifications()"
+                            class="relative w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30"><i
+                                class="fas fa-bell"></i><span id="notification-badge"
+                                class="hidden absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center notification-badge">0</span></button>
+                        <div x-show="open" @click.away="open = false" x-transition
+                            class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl text-gray-700 max-h-96 overflow-hidden">
+                            <div class="p-3 border-b flex justify-between items-center"><span
+                                    class="font-semibold">Уведомления</span><button onclick="markAllRead()"
+                                    class="text-sm text-blue-500 hover:text-blue-600">Прочитать все</button></div>
+                            <div id="notifications-list" class="max-h-72 overflow-y-auto">
+                                <div class="p-4 text-center text-gray-400">Загрузка...</div>
+                            </div>
+                            <a href="{{ url_for('profile.notifications') }}"
+                                class="block p-3 text-center text-blue-500 hover:bg-gray-50 border-t">Все
+                                уведомления</a>
+                        </div>
+                    </div>
+                    {% if current_user.is_authenticated and current_user.can_access_admin() %}<a
+                        href="{{ url_for('admin.index') }}"
+                        class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30"
+                        title="Панель управления"><i class="fas fa-cog"></i></a>{% endif %}
+                    <div class="relative" x-data="{ open: false }">
+                        <button @click="open = !open"
+                            class="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-white/10">
+                            <img src="{{ url_for('static', filename=current_user.photo|user_photo) }}"
+                                class="w-8 h-8 rounded-full object-cover bg-white/20">
+                            <span class="hidden sm:block">{{ current_user.short_name }}</span><i
+                                class="fas fa-chevron-down text-xs"></i>
+                        </button>
+                        <div x-show="open" @click.away="open = false" x-transition
+                            class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl py-2 text-gray-700">
+                            <a href="{{ url_for('profile.index') }}" class="block px-4 py-2 hover:bg-gray-100"><i
+                                    class="fas fa-user mr-2 text-gray-400"></i>Профиль</a>
+                            <a href="{{ url_for('requests.my_requests') }}" class="block px-4 py-2 hover:bg-gray-100"><i
+                                    class="fas fa-clipboard-list mr-2 text-gray-400"></i>Мои заявки</a>
+                            <hr class="my-2">
+                            <a href="{{ url_for('auth.logout') }}"
+                                class="block px-4 py-2 hover:bg-gray-100 text-red-600"><i
+                                    class="fas fa-sign-out-alt mr-2"></i>Выйти</a>
+                        </div>
+                    </div>
+                    <button id="mobile-menu-btn"
+                        class="lg:hidden w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30"><i
+                            class="fas fa-bars"></i></button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div id="mobile-menu-backdrop" class="fixed inset-0 backdrop z-40 hidden"></div>
+    <aside id="mobile-menu"
+        class="fixed top-0 right-0 h-full w-80 max-w-full bg-slate-800 text-white shadow-2xl z-50 transform translate-x-full mobile-menu">
+        <div class="flex flex-col h-full">
+            <div class="flex items-center justify-between p-4 border-b border-slate-700">
+                <div class="flex items-center space-x-3">
+                    <img src="{{ url_for('static', filename=current_user.photo|user_photo) }}"
+                        class="w-10 h-10 rounded-full object-cover">
+                    <div>
+                        <p class="font-medium">{{ current_user.full_name }}</p>
+                        <p class="text-sm text-slate-400">{{ current_user.email }}</p>
+                    </div>
+                </div>
+                <button id="mobile-menu-close"
+                    class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center hover:bg-slate-600"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            <nav class="flex-1 overflow-y-auto p-4">
+                <ul class="space-y-1">
+                    <li><a href="{{ url_for('main.index') }}"
+                            class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-700"><i
+                                class="fas fa-home w-5 text-center text-slate-400"></i><span>Главная</span></a></li>
+                    <li><a href="{{ url_for('messenger.index') }}"
+                            class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-700"><i
+                                class="fas fa-comment-dots w-5 text-center text-slate-400"></i><span>Сообщения</span></a>
+                    </li>
+                    <li><a href="{{ url_for('profile.index') }}"
+                            class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-700"><i
+                                class="fas fa-user w-5 text-center text-slate-400"></i><span>Профиль</span></a></li>
+                    <li><a href="{{ url_for('news.index') }}"
+                            class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-700"><i
+                                class="fas fa-newspaper w-5 text-center text-slate-400"></i><span>Новости</span></a>
+                    </li>
+                    <li><a href="{{ url_for('requests.pass_request') }}"
+                            class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-700"><i
+                                class="fas fa-id-card w-5 text-center text-slate-400"></i><span>Оформить
+                                пропуск</span></a></li>
+                    <li><a href="{{ url_for('staff.index') }}"
+                            class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-700"><i
+                                class="fas fa-users w-5 text-center text-slate-400"></i><span>Сотрудники</span></a></li>
+                    <li><a href="{{ url_for('vacancies.index') }}"
+                            class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-700"><i
+                                class="fas fa-briefcase w-5 text-center text-slate-400"></i><span>Вакансии</span></a>
+                    </li>
+                    <li><a href="{{ url_for('surveys.index') }}"
+                            class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-700"><i
+                                class="fas fa-poll w-5 text-center text-slate-400"></i><span>Опросы</span></a></li>
+                    <li><a href="{{ url_for('tests.index') }}"
+                            class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-700"><i
+                                class="fas fa-clipboard-check w-5 text-center text-slate-400"></i><span>Тесты</span></a>
+                    </li>
+                    <li><a href="{{ url_for('security.index') }}"
+                            class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-700"><i
+                                class="fas fa-shield-alt w-5 text-center text-slate-400"></i><span>Безопасность</span></a>
+                    </li>
+                    <li><a href="{{ url_for('requests.order_request') }}"
+                            class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-700"><i
+                                class="fas fa-shopping-cart w-5 text-center text-slate-400"></i><span>Заказ
+                                товаров</span></a></li>
+                    <li><a href="{{ url_for('tables.index') }}"
+                            class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-700"><i
+                                class="fas fa-table w-5 text-center text-slate-400"></i><span>Таблицы</span></a></li>
+                </ul>
+                {% if current_user.is_authenticated and current_user.can_access_admin() %}
+                <div class="mt-6 pt-6 border-t border-slate-700">
+                    <p class="px-4 text-xs font-semibold text-slate-500 uppercase mb-2">Управление</p>
+                    <a href="{{ url_for('admin.index') }}"
+                        class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-slate-700"><i
+                            class="fas fa-cog w-5 text-center text-slate-400"></i><span>Панель управления</span></a>
+                </div>
+                {% endif %}
+            </nav>
+            <div class="p-4 border-t border-slate-700">
+                <a href="{{ url_for('auth.logout') }}"
+                    class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-red-600/20 text-red-400"><i
+                        class="fas fa-sign-out-alt w-5 text-center"></i><span>Выйти</span></a>
+            </div>
+        </div>
+    </aside>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}
+    <div class="fixed right-4 z-50 space-y-2"
+        style="top: {% if 'garland' in decoration_types and ns.garland_position == 'above' %}104px{% elif 'newyear_balls' in decoration_types %}144px{% else %}80px{% endif %};">
+        {% for category, message in messages %}
+        <div
+            class="toast flex items-center p-4 rounded-xl shadow-lg {% if category == 'error' %}bg-red-500{% elif category == 'success' %}bg-green-500{% elif category == 'warning' %}bg-yellow-500{% else %}bg-blue-500{% endif %} text-white max-w-sm">
+            <i
+                class="fas {% if category == 'error' %}fa-exclamation-circle{% elif category == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %} mr-3"></i>
+            <span>{{ message }}</span>
+            <button onclick="this.parentElement.remove()" class="ml-4 hover:opacity-75"><i
+                    class="fas fa-times"></i></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}{% endwith %}
+
+    <main class="pb-8 min-h-screen"
+        style="padding-top: {% if 'garland' in decoration_types and ns.garland_position == 'above' %}104px{% elif 'newyear_balls' in decoration_types %}144px{% else %}80px{% endif %};">
+        {% block content %}{% endblock %}</main>
+
+    <footer class="bg-slate-800 text-white py-8">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="flex items-center space-x-3 mb-4 md:mb-0">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center"
+                        style="background-color: {{ appearance.primary_color }};"><i
+                            class="fas fa-building text-sm"></i></div>
+                    <span class="font-semibold">{{ appearance.site_name }}</span>
+                </div>
+                <p class="text-slate-400 text-sm">© 2025 Все права защищены</p>
+            </div>
+        </div>
+    </footer>
+
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn'), mobileMenuClose = document.getElementById('mobile-menu-close'), mobileMenu = document.getElementById('mobile-menu'), mobileMenuBackdrop = document.getElementById('mobile-menu-backdrop');
+        function openMobileMenu() { mobileMenu.classList.add('open'); mobileMenu.classList.remove('translate-x-full'); mobileMenuBackdrop.classList.remove('hidden'); document.body.style.overflow = 'hidden' }
+        function closeMobileMenu() { mobileMenu.classList.remove('open'); mobileMenu.classList.add('translate-x-full'); mobileMenuBackdrop.classList.add('hidden'); document.body.style.overflow = '' }
+        mobileMenuBtn?.addEventListener('click', openMobileMenu); mobileMenuClose?.addEventListener('click', closeMobileMenu); mobileMenuBackdrop?.addEventListener('click', closeMobileMenu);
+        function loadNotifications() { fetch('{{ url_for("profile.notifications_recent") }}').then(r => r.json()).then(data => { const list = document.getElementById('notifications-list'); if (data.notifications.length === 0) { list.innerHTML = '<div class="p-4 text-center text-gray-400">Нет уведомлений</div>'; return } list.innerHTML = data.notifications.map(n => `<div onclick="openNotificationModalBase('${escapeHtml(n.title)}','${escapeHtml(n.message || '')}','${n.icon}','${n.type}','${n.created_at}','${n.link || ''}',${n.id})" class="px-4 py-3 hover:bg-gray-50 border-b cursor-pointer ${n.is_read ? 'opacity-60' : ''}"><div class="flex items-start space-x-3"><i class="fas fa-${n.icon} text-${n.type === 'error' ? 'red' : n.type === 'success' ? 'green' : 'blue'}-500 mt-1"></i><div class="flex-1 min-w-0"><p class="font-medium text-gray-800 text-sm">${escapeHtml(n.title)}</p>${n.message ? `<p class="text-xs text-gray-500 truncate">${escapeHtml(n.message)}</p>` : ''}<p class="text-xs text-gray-400 mt-1">${n.created_at}</p></div></div></div>`).join('') }) }
+        function escapeHtml(text) { if (!text) return ''; const div = document.createElement('div'); div.textContent = text; return div.innerHTML.replace(/'/g, "\\'").replace(/\n/g, '\\n') }
+        function updateNotificationBadge() { fetch('{{ url_for("profile.notifications_unread_count") }}').then(r => r.json()).then(data => { const badge = document.getElementById('notification-badge'); if (data.count > 0) { badge.textContent = data.count > 9 ? '9+' : data.count; badge.classList.remove('hidden') } else { badge.classList.add('hidden') } }) }
+        function markRead(id) { fetch(`/profile/notifications/${id}/read`, { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token() }}' } }) }
+        function markAllRead() { fetch('{{ url_for("profile.notifications_read_all") }}', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token() }}' } }).then(() => { loadNotifications(); updateNotificationBadge() }) }
+        function updateMessengerBadge() { fetch('{{ url_for("messenger.unread_count") }}').then(r => r.json()).then(data => { const badge = document.getElementById('messenger-badge'); if (data.count > 0) { badge.textContent = data.count > 9 ? '9+' : data.count; badge.classList.remove('hidden'); badge.classList.add('flex') } else { badge.classList.add('hidden'); badge.classList.remove('flex') } }) }
+        updateNotificationBadge(); updateMessengerBadge(); setInterval(updateNotificationBadge, 60000); setInterval(updateMessengerBadge, 30000);
+        setTimeout(() => { document.querySelectorAll('.toast').forEach(toast => { toast.style.animation = 'toastIn 0.3s ease-out reverse forwards'; setTimeout(() => toast.remove(), 300) }) }, 5000);
+    </script>
+    {% block extra_js %}{% endblock %}
+
+    <div id="notification-modal-base" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeNotificationModalBase()"></div>
+        <div
+            class="absolute inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b flex items-center space-x-4">
+                <div id="base-modal-icon"
+                    class="w-12 h-12 rounded-full flex items-center justify-center shrink-0 bg-blue-100 text-blue-600">
+                    <i id="base-modal-icon-i" class="fas fa-bell text-xl"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 id="base-modal-title" class="text-lg font-semibold text-gray-800"></h3>
+                    <p id="base-modal-date" class="text-sm text-gray-400"></p>
+                </div>
+                <button onclick="closeNotificationModalBase()"
+                    class="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600"><i
+                        class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6">
+                <p id="base-modal-message" class="text-gray-700 whitespace-pre-wrap"></p>
+            </div>
+            <div class="p-4 border-t flex items-center justify-end space-x-3">
+                <button onclick="closeNotificationModalBase()"
+                    class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Закрыть</button>
+                <a id="base-modal-link" href="#"
+                    class="hidden px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"><i
+                        class="fas fa-external-link-alt mr-2"></i>Перейти</a>
+            </div>
+        </div>
+    </div>
+    <script>
+        function openNotificationModalBase(title, message, icon, type, date, link, id) { const modal = document.getElementById('notification-modal-base'), modalIcon = document.getElementById('base-modal-icon'), modalIconI = document.getElementById('base-modal-icon-i'); modalIcon.className = 'w-12 h-12 rounded-full flex items-center justify-center shrink-0'; if (type === 'error') modalIcon.classList.add('bg-red-100', 'text-red-600'); else if (type === 'success') modalIcon.classList.add('bg-green-100', 'text-green-600'); else if (type === 'warning') modalIcon.classList.add('bg-yellow-100', 'text-yellow-600'); else modalIcon.classList.add('bg-blue-100', 'text-blue-600'); modalIconI.className = 'fas fa-' + icon + ' text-xl'; document.getElementById('base-modal-title').textContent = title; document.getElementById('base-modal-message').textContent = message ? message.replace(/\\n/g, '\n') : 'Нет дополнительного текста'; document.getElementById('base-modal-date').textContent = date; const modalLink = document.getElementById('base-modal-link'); if (link) { modalLink.href = link; modalLink.classList.remove('hidden') } else { modalLink.classList.add('hidden') } modal.classList.remove('hidden'); document.body.style.overflow = 'hidden'; if (id) { fetch(`/profile/notifications/${id}/read`, { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token() }}' } }).then(() => { updateNotificationBadge(); loadNotifications() }) } }
+        function closeNotificationModalBase() { document.getElementById('notification-modal-base').classList.add('hidden'); document.body.style.overflow = '' }
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeNotificationModalBase() });
+    </script>
+
+    {% if 'snow' in decoration_types %}
+    <script>function createSnowflake() { const s = document.createElement('div'); s.className = 'snowflake'; s.innerHTML = '❄'; s.style.left = Math.random() * 100 + 'vw'; s.style.fontSize = (Math.random() * 10 + 10) + 'px'; s.style.opacity = Math.random() * 0.5 + 0.5; s.style.animationDuration = (Math.random() * 3 + 2) + 's'; document.body.appendChild(s); setTimeout(() => s.remove(), 5000) } setInterval(createSnowflake, 100)</script>
+    {% endif %}
+
+    {% if 'hearts' in decoration_types %}
+    <script>function createHeart() { const h = document.createElement('div'); h.className = 'heart'; h.innerHTML = '❤'; h.style.left = Math.random() * 100 + 'vw'; h.style.bottom = '0'; h.style.fontSize = (Math.random() * 20 + 15) + 'px'; h.style.animationDuration = (Math.random() * 2 + 3) + 's'; document.body.appendChild(h); setTimeout(() => h.remove(), 5000) } setInterval(createHeart, 300)</script>
+    {% endif %}
+
+    {% if 'confetti' in decoration_types %}
+    <script>const confettiColors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899']; function createConfetti() { const c = document.createElement('div'); c.className = 'confetti'; c.style.left = Math.random() * 100 + 'vw'; c.style.backgroundColor = confettiColors[Math.floor(Math.random() * confettiColors.length)]; c.style.animationDuration = (Math.random() * 2 + 2) + 's'; c.style.width = (Math.random() * 8 + 5) + 'px'; c.style.height = (Math.random() * 8 + 5) + 'px'; document.body.appendChild(c); setTimeout(() => c.remove(), 4000) } setInterval(createConfetti, 50)</script>
+    {% endif %}
+
+    {% if 'flowers' in decoration_types %}
+    <script>
+        const flowerEmojis = ['🌸', '🌺', '🌷', '🌹', '🌻', '💐', '🌼', '🏵️'];
+        function createFlower() {
+            const f = document.createElement('div');
+            f.className = 'flower';
+            f.innerHTML = flowerEmojis[Math.floor(Math.random() * flowerEmojis.length)];
+            f.style.left = Math.random() * 100 + 'vw';
+            f.style.fontSize = (Math.random() * 15 + 15) + 'px';
+            f.style.animationDuration = (Math.random() * 4 + 3) + 's';
+            document.body.appendChild(f);
+            setTimeout(() => f.remove(), 7000);
+        }
+        setInterval(createFlower, 200);
+    </script>
+    {% endif %}
+
+    {% if 'leaves' in decoration_types %}
+    <script>
+        const leafEmojis = ['🍂', '🍁', '🍃', '🌿'];
+        function createLeaf() {
+            const l = document.createElement('div');
+            l.className = 'leaf';
+            l.innerHTML = leafEmojis[Math.floor(Math.random() * leafEmojis.length)];
+            l.style.left = Math.random() * 100 + 'vw';
+            l.style.fontSize = (Math.random() * 15 + 15) + 'px';
+            l.style.animationDuration = (Math.random() * 5 + 4) + 's';
+            document.body.appendChild(l);
+            setTimeout(() => l.remove(), 9000);
+        }
+        setInterval(createLeaf, 250);
+    </script>
+    {% endif %}
+
+    {% if 'stars' in decoration_types %}
+    <script>
+        const starEmojis = ['⭐', '✨', '🌟', '💫'];
+        function createStar() {
+            const s = document.createElement('div');
+            s.className = 'star-particle';
+            s.innerHTML = starEmojis[Math.floor(Math.random() * starEmojis.length)];
+            s.style.left = Math.random() * 100 + 'vw';
+            s.style.top = Math.random() * 100 + 'vh';
+            s.style.fontSize = (Math.random() * 10 + 10) + 'px';
+            s.style.animationDelay = Math.random() * 2 + 's';
+            document.body.appendChild(s);
+            setTimeout(() => s.remove(), 10000);
+        }
+        for (let i = 0; i < 30; i++)setTimeout(createStar, i * 100);
+        setInterval(createStar, 500);
+    </script>
+    {% endif %}
+
+    {% if is_birthday_today %}
+    <script>
+        (function () {
+            const today = new Date().toDateString();
+            const storageKey = 'birthday_confetti_shown_{{ current_user.id }}';
+            const lastShown = localStorage.getItem(storageKey);
+            if (lastShown === today) return;
+            localStorage.setItem(storageKey, today);
+            const colors = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#95e1d3', '#f38181', '#aa96da', '#fcbad3', '#a8d8ea'];
+            const shapes = ['■', '●', '▲', '★', '♦', '♥'];
+            let confettiCount = 0;
+            const maxConfetti = 150;
+            function createBirthdayConfetti() {
+                if (confettiCount >= maxConfetti) return;
+                confettiCount++;
+                const c = document.createElement('div');
+                c.className = 'birthday-confetti';
+                c.innerHTML = shapes[Math.floor(Math.random() * shapes.length)];
+                c.style.left = Math.random() * 100 + 'vw';
+                c.style.top = '-20px';
+                c.style.color = colors[Math.floor(Math.random() * colors.length)];
+                c.style.fontSize = (Math.random() * 15 + 10) + 'px';
+                c.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 4000);
+            }
+            const interval = setInterval(createBirthdayConfetti, 30);
+            setTimeout(() => { clearInterval(interval) }, 3000);
+        })();
+    </script>
+    {% endif %}
+
+    {% set greeting = get_greeting_data() %}
+    {% if greeting %}
+    <!-- Greeting Animation Overlay -->
+    <div id="greeting-overlay"
+        style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;opacity:1;transition:opacity 0.5s ease;">
+        {% if greeting.type == 'morning' %}
+        <div
+            style="position:absolute;inset:0;background:linear-gradient(180deg, #1a237e 0%, #2196F3 30%, #FFB74D 70%, #FF7043 100%);">
+        </div>
+        <div
+            style="position:absolute;bottom:20%;left:50%;transform:translateX(-50%);width:120px;height:120px;border-radius:50%;background:radial-gradient(circle, #FFF176 0%, #FFD54F 40%, #FF8F00 100%);box-shadow:0 0 60px 30px rgba(255,183,77,0.4);animation:sunrise 2s ease-out forwards;">
+        </div>
+        {% elif greeting.type == 'afternoon' %}
+        <div
+            style="position:absolute;inset:0;background:linear-gradient(180deg, #1565C0 0%, #1e90ff 30%, #87ceeb 70%, #b3e5fc 100%);">
+        </div>
+        <div
+            style="position:absolute;top:15%;right:20%;width:100px;height:100px;border-radius:50%;background:radial-gradient(circle, #FFFFFF 0%, #FFF176 30%, #FFD54F 100%);box-shadow:0 0 80px 40px rgba(255,235,59,0.3);animation:float-sun 3s ease-in-out infinite;">
+        </div>
+        <div
+            style="position:absolute;top:30%;left:10%;width:200px;height:60px;background:rgba(255,255,255,0.3);border-radius:50px;filter:blur(10px);">
+        </div>
+        <div
+            style="position:absolute;top:25%;right:30%;width:150px;height:40px;background:rgba(255,255,255,0.2);border-radius:50px;filter:blur(8px);">
+        </div>
+        {% elif greeting.type == 'evening' %}
+        <div
+            style="position:absolute;inset:0;background:linear-gradient(180deg, #0b0e23 0%, #1a1a4e 25%, #3a2d5c 50%, #d97a6a 80%, #f4a261 100%);">
+        </div>
+        <div
+            style="position:absolute;top:12%;left:15%;width:80px;height:80px;border-radius:50%;background:radial-gradient(circle, #FFFFFF 0%, #e0e0e0 50%, #bdbdbd 100%);box-shadow:0 0 40px 20px rgba(255,255,255,0.15);">
+        </div>
+        <div
+            style="position:absolute;top:8%;left:30%;width:4px;height:4px;border-radius:50%;background:#fff;box-shadow:0 0 4px 2px rgba(255,255,255,0.5);">
+        </div>
+        <div
+            style="position:absolute;top:15%;right:25%;width:3px;height:3px;border-radius:50%;background:#fff;box-shadow:0 0 3px 1px rgba(255,255,255,0.4);">
+        </div>
+        <div
+            style="position:absolute;top:5%;right:40%;width:2px;height:2px;border-radius:50%;background:#fff;box-shadow:0 0 3px 1px rgba(255,255,255,0.3);">
+        </div>
+        <div
+            style="position:absolute;top:20%;left:50%;width:3px;height:3px;border-radius:50%;background:#fff;box-shadow:0 0 4px 2px rgba(255,255,255,0.4);">
+        </div>
+        <div
+            style="position:absolute;top:10%;left:60%;width:2px;height:2px;border-radius:50%;background:#fff;box-shadow:0 0 3px 1px rgba(255,255,255,0.3);">
+        </div>
+        {% endif %}
+
+        <!-- Close button -->
+        <button onclick="closeGreeting()"
+            style="position:absolute;top:20px;right:20px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);border:none;color:white;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);z-index:10;transition:background 0.2s;"
+            onmouseover="this.style.background='rgba(255,255,255,0.3)'"
+            onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <!-- Greeting text -->
+        <div id="greeting-text"
+            style="position:relative;z-index:5;text-align:center;opacity:0;transform:translateY(20px);transition:opacity 1s ease, transform 1s ease;">
+            <p
+                style="font-size:clamp(2rem, 5vw, 3.5rem);font-weight:700;color:white;text-shadow:0 2px 20px rgba(0,0,0,0.3);margin:0;">
+                {{ greeting.text }}</p>
+            {% if greeting.type == 'morning' %}
+            <p style="font-size:3rem;margin-top:16px;">🌅</p>
+            {% elif greeting.type == 'afternoon' %}
+            <p style="font-size:3rem;margin-top:16px;">☀️</p>
+            {% elif greeting.type == 'evening' %}
+            <p style="font-size:3rem;margin-top:16px;">🌙</p>
+            {% endif %}
+        </div>
+    </div>
+    <style>
+        @keyframes sunrise {
+            from {
+                transform: translateX(-50%) translateY(60px);
+                opacity: 0.5;
+            }
+
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes float-sun {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+    </style>
+    <script>
+        (function () {
+            // Fade in text after 1 second
+            setTimeout(function () {
+                var textEl = document.getElementById('greeting-text');
+                if (textEl) {
+                    textEl.style.opacity = '1';
+                    textEl.style.transform = 'translateY(0)';
+                }
+            }, 1000);
+
+            // Auto-close after 8 seconds
+            setTimeout(closeGreeting, 8000);
+        })();
+
+        function closeGreeting() {
+            var overlay = document.getElementById('greeting-overlay');
+            if (overlay) {
+                overlay.style.opacity = '0';
+                setTimeout(function () { overlay.remove(); }, 500);
+            }
+        }
+    </script>
+    {% endif %}
+
+</body>
+
+</html>

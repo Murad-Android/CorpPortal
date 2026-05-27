@@ -1,0 +1,365 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ 'Редактировать' if survey else 'Создать' }} опрос - Панель управления{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">{{ 'Редактировать опрос' if survey else 'Новый опрос' }}</h1>
+            <p class="text-gray-500">{{ survey.title if survey else 'Создание нового опроса' }}</p>
+        </div>
+        <a href="{{ url_for('admin.surveys') }}" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">
+            <i class="fas fa-arrow-left mr-2"></i>Назад
+        </a>
+    </div>
+
+    <form method="POST" class="space-y-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Основная информация -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Основная информация</h2>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Название опроса *</label>
+                    <input type="text" name="title" value="{{ survey.title if survey else '' }}" required
+                        class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Например: Оценка корпоративного мероприятия">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Описание</label>
+                    <textarea name="description" rows="3"
+                        class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Краткое описание опроса">{{ survey.description if survey else '' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Настройки -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Настройки</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <label class="flex items-center space-x-3 p-3 border rounded-xl hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" name="is_active" {{ 'checked' if not survey or survey.is_active else '' }}
+                        class="w-5 h-5 text-blue-500 rounded">
+                    <div>
+                        <span class="font-medium">Активен</span>
+                        <p class="text-sm text-gray-500">Опрос доступен для голосования</p>
+                    </div>
+                </label>
+
+                <label class="flex items-center space-x-3 p-3 border rounded-xl hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" name="is_anonymous" {{ 'checked' if survey and survey.is_anonymous else '' }}
+                        class="w-5 h-5 text-purple-500 rounded">
+                    <div>
+                        <span class="font-medium">Анонимный</span>
+                        <p class="text-sm text-gray-500">Ответы не привязаны к пользователям</p>
+                    </div>
+                </label>
+
+                <label class="flex items-center space-x-3 p-3 border rounded-xl hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" name="show_results" {{ 'checked' if not survey or survey.show_results else ''
+                        }} class="w-5 h-5 text-green-500 rounded">
+                    <div>
+                        <span class="font-medium">Показывать результаты</span>
+                        <p class="text-sm text-gray-500">Пользователи видят результаты после голосования</p>
+                    </div>
+                </label>
+
+                <label class="flex items-center space-x-3 p-3 border rounded-xl hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" name="is_public" {{ 'checked' if survey and survey.is_public else '' }}
+                        class="w-5 h-5 text-blue-500 rounded">
+                    <div>
+                        <span class="font-medium">Публичный доступ</span>
+                        <p class="text-sm text-gray-500">Доступен по ссылке без авторизации</p>
+                    </div>
+                </label>
+
+                {% if not survey %}
+                <label class="flex items-center space-x-3 p-3 border rounded-xl hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" name="publish_in_news" class="w-5 h-5 text-orange-500 rounded">
+                    <div>
+                        <span class="font-medium">Опубликовать в новостях</span>
+                        <p class="text-sm text-gray-500">Создать новость об опросе</p>
+                    </div>
+                </label>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Даты -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Период проведения</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Дата начала</label>
+                    <input type="datetime-local" name="start_date"
+                        value="{{ survey.start_date.strftime('%Y-%m-%dT%H:%M') if survey and survey.start_date else '' }}"
+                        class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Дата окончания</label>
+                    <input type="datetime-local" name="end_date"
+                        value="{{ survey.end_date.strftime('%Y-%m-%dT%H:%M') if survey and survey.end_date else '' }}"
+                        class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+        </div>
+
+        <!-- Ограничение по отделам -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Доступ по отделам</h2>
+            <p class="text-sm text-gray-500 mb-4">Оставьте пустым для доступа всем сотрудникам</p>
+
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto">
+                {% set selected_deps = survey.get_departments() if survey else [] %}
+                {% for dept in departments %}
+                <label class="flex items-center space-x-2 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" name="departments" value="{{ dept }}" {{ 'checked' if dept in selected_deps
+                        else '' }} class="w-4 h-4 text-blue-500 rounded">
+                    <span class="text-sm truncate">{{ dept }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        {% if survey %}
+        <!-- Публичная ссылка -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Публичная ссылка</h2>
+
+            <div class="flex items-center space-x-2">
+                <input type="text" readonly id="public-link"
+                    value="{{ url_for('surveys.public_survey', token=survey.public_token, _external=True) }}"
+                    class="flex-1 px-4 py-2 bg-gray-50 border rounded-xl text-sm">
+                <button type="button" onclick="copyLink()"
+                    class="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">
+                    <i class="fas fa-copy"></i>
+                </button>
+            </div>
+
+            <form action="{{ url_for('admin.survey_regenerate_token', id=survey.id) }}" method="POST" class="mt-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="text-sm text-blue-500 hover:underline">
+                    <i class="fas fa-sync-alt mr-1"></i>Сгенерировать новую ссылку
+                </button>
+            </form>
+        </div>
+
+        <!-- Вопросы (для существующего опроса) -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Вопросы</h2>
+
+            <div class="space-y-4 mb-6">
+                {% for question in survey.questions %}
+                <div class="p-4 border rounded-xl">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-2">
+                                <span class="px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-600">
+                                    {% if question.question_type == 'single' %}Один ответ
+                                    {% elif question.question_type == 'multiple' %}Несколько ответов
+                                    {% else %}Текстовый{% endif %}
+                                </span>
+                            </div>
+                            <p class="font-medium">{{ question.text }}</p>
+                            {% if question.question_type != 'text' %}
+                            <ul class="mt-2 space-y-1">
+                                {% for option in question.options %}
+                                <li class="text-sm text-gray-600">• {{ option.text }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% endif %}
+                        </div>
+                        <form action="{{ url_for('admin.survey_delete_question', id=question.id) }}" method="POST"
+                            onsubmit="return confirm('Удалить вопрос?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-gray-500 text-center py-4">Вопросов пока нет</p>
+                {% endfor %}
+            </div>
+
+            <!-- Добавить вопрос -->
+            <div class="border-t pt-4">
+                <h3 class="font-medium mb-3">Добавить вопрос</h3>
+                <form action="{{ url_for('admin.survey_add_question', id=survey.id) }}" method="POST"
+                    id="add-question-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="space-y-3">
+                        <input type="text" name="text" required placeholder="Текст вопроса"
+                            class="w-full px-4 py-2 border rounded-xl">
+
+                        <select name="question_type" id="new-question-type" onchange="toggleOptions()"
+                            class="w-full px-4 py-2 border rounded-xl">
+                            <option value="single">Один ответ</option>
+                            <option value="multiple">Несколько ответов</option>
+                            <option value="text">Текстовый ответ</option>
+                        </select>
+
+                        <div id="options-container" class="space-y-2">
+                            <div class="flex items-center space-x-2">
+                                <input type="text" name="options[]" placeholder="Вариант ответа 1"
+                                    class="flex-1 px-4 py-2 border rounded-xl">
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <input type="text" name="options[]" placeholder="Вариант ответа 2"
+                                    class="flex-1 px-4 py-2 border rounded-xl">
+                            </div>
+                        </div>
+
+                        <button type="button" onclick="addOption()" id="add-option-btn"
+                            class="text-sm text-blue-500 hover:underline">
+                            <i class="fas fa-plus mr-1"></i>Добавить вариант
+                        </button>
+
+                        <button type="submit"
+                            class="w-full px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600">
+                            <i class="fas fa-plus mr-2"></i>Добавить вопрос
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <!-- Вопросы (для нового опроса) -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Вопросы</h2>
+
+            <div id="questions-container" class="space-y-4">
+                <!-- Шаблон вопроса будет добавляться через JS -->
+            </div>
+
+            <button type="button" onclick="addQuestion()"
+                class="mt-4 w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-blue-500 hover:text-blue-500">
+                <i class="fas fa-plus mr-2"></i>Добавить вопрос
+            </button>
+        </div>
+        {% endif %}
+
+        <div class="flex justify-end space-x-3">
+            <a href="{{ url_for('admin.surveys') }}" class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">
+                Отмена
+            </a>
+            <button type="submit" class="px-6 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">
+                <i class="fas fa-save mr-2"></i>{{ 'Сохранить' if survey else 'Создать опрос' }}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    let questionIndex = 0;
+
+    function addQuestion() {
+        const container = document.getElementById('questions-container');
+        const html = `
+        <div class="question-block p-4 border rounded-xl" data-index="${questionIndex}">
+            <div class="flex items-start justify-between mb-3">
+                <span class="text-sm font-medium text-gray-500">Вопрос ${questionIndex + 1}</span>
+                <button type="button" onclick="removeQuestion(this)" class="text-red-500 hover:text-red-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <input type="text" name="question_text[]" required placeholder="Текст вопроса"
+                   class="w-full px-4 py-2 border rounded-xl mb-3">
+            <select name="question_type[]" onchange="toggleQuestionOptions(this)"
+                    class="w-full px-4 py-2 border rounded-xl mb-3">
+                <option value="single">Один ответ</option>
+                <option value="multiple">Несколько ответов</option>
+                <option value="text">Текстовый ответ</option>
+            </select>
+            <div class="options-list space-y-2">
+                <input type="text" name="options_${questionIndex}[]" placeholder="Вариант 1" class="w-full px-4 py-2 border rounded-xl">
+                <input type="text" name="options_${questionIndex}[]" placeholder="Вариант 2" class="w-full px-4 py-2 border rounded-xl">
+            </div>
+            <button type="button" onclick="addQuestionOption(this)" class="mt-2 text-sm text-blue-500 hover:underline add-option-btn">
+                <i class="fas fa-plus mr-1"></i>Добавить вариант
+            </button>
+        </div>
+    `;
+        container.insertAdjacentHTML('beforeend', html);
+        questionIndex++;
+    }
+
+    function removeQuestion(btn) {
+        btn.closest('.question-block').remove();
+    }
+
+    function toggleQuestionOptions(select) {
+        const block = select.closest('.question-block');
+        const optionsList = block.querySelector('.options-list');
+        const addBtn = block.querySelector('.add-option-btn');
+
+        if (select.value === 'text') {
+            optionsList.style.display = 'none';
+            addBtn.style.display = 'none';
+        } else {
+            optionsList.style.display = 'block';
+            addBtn.style.display = 'block';
+        }
+    }
+
+    function addQuestionOption(btn) {
+        const block = btn.closest('.question-block');
+        const optionsList = block.querySelector('.options-list');
+        const index = block.dataset.index;
+        const count = optionsList.querySelectorAll('input').length + 1;
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.name = `options_${index}[]`;
+        input.placeholder = `Вариант ${count}`;
+        input.className = 'w-full px-4 py-2 border rounded-xl';
+        optionsList.appendChild(input);
+    }
+
+    // Для редактирования
+    function toggleOptions() {
+        const type = document.getElementById('new-question-type').value;
+        const container = document.getElementById('options-container');
+        const btn = document.getElementById('add-option-btn');
+
+        if (type === 'text') {
+            container.style.display = 'none';
+            btn.style.display = 'none';
+        } else {
+            container.style.display = 'block';
+            btn.style.display = 'block';
+        }
+    }
+
+    function addOption() {
+        const container = document.getElementById('options-container');
+        const count = container.querySelectorAll('input').length + 1;
+
+        const div = document.createElement('div');
+        div.className = 'flex items-center space-x-2';
+        div.innerHTML = `<input type="text" name="options[]" placeholder="Вариант ответа ${count}" class="flex-1 px-4 py-2 border rounded-xl">`;
+        container.appendChild(div);
+    }
+
+    function copyLink() {
+        const input = document.getElementById('public-link');
+        input.select();
+        document.execCommand('copy');
+        alert('Ссылка скопирована!');
+    }
+
+    // Добавляем первый вопрос при создании
+    {% if not survey %}
+    addQuestion();
+    {% endif %}
+</script>
+{% endblock %}

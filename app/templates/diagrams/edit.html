@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}{{ diagram.title }} | Редактирование{% endblock %}
+
+{% block extra_css %}
+<style>
+    .diagram-editor {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 9999;
+        background: white;
+    }
+
+    .editor-header {
+        height: 50px;
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        color: white;
+    }
+
+    .editor-frame {
+        width: 100%;
+        height: calc(100vh - 50px);
+        border: none;
+    }
+
+    .save-indicator {
+        display: none;
+        align-items: center;
+        padding: 4px 12px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        font-size: 14px;
+    }
+
+    .save-indicator.saving {
+        display: flex;
+    }
+
+    .save-indicator.saved {
+        display: flex;
+        background: rgba(34, 197, 94, 0.3);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Загрузочный экран -->
+<div id="loadingOverlay" class="fixed inset-0 bg-white z-[10000] flex items-center justify-center">
+    <div class="text-center">
+        <div class="w-16 h-16 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+        <p class="text-gray-600 text-lg">Подождите, идёт загрузка диаграммы...</p>
+    </div>
+</div>
+
+<div class="diagram-editor" id="diagramEditor">
+    <div class="editor-header">
+        <div class="flex items-center space-x-4">
+            <a href="{{ url_for('diagrams.index') }}" class="hover:bg-white/20 p-2 rounded-lg transition-colors"
+                title="Назад" id="backBtn">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <span class="font-semibold">{{ diagram.title }}</span>
+        </div>
+        <div class="flex items-center space-x-3">
+            <div class="save-indicator" id="saveIndicator">
+                <i class="fas fa-spinner fa-spin mr-2"></i>
+                <span id="saveText">Сохранение...</span>
+            </div>
+            <a href="{{ url_for('diagrams.settings', id=diagram.id) }}"
+                class="px-4 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
+                <i class="fas fa-share-alt mr-2"></i>Поделиться
+            </a>
+        </div>
+    </div>
+    <iframe id="drawioFrame" class="editor-frame"></iframe>
+</div>
+<textarea id="xmlData" style="display:none;">{{ diagram.xml_data or '' }}</textarea>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const diagramId = {{ diagram.id }};
+    const initialXml = document.getElementById('xmlData').value;
+    let currentXml = initialXml;
+    let saveTimeout = null;
+    let hasChanges = false;
+    let isLoaded = false;
+
+    function initDrawio() {
+        const frame = document.getElementById('drawioFrame');
+        const params = new URLSearchParams({
+            embed: 1,
+            spin: 1,
+            proto: 'json',
+            configure: 1,
+            dark: 0,
+            ui: 'kennedy',
+            noSaveBtn: 0,
+            noExitBtn: 1,
+            saveAndExit: 0,
+            lang: 'ru'
+        });
+        frame.src = 'https://embed.diagrams.net/?' + params.toString();
+    }
+
+    window.addEventListener('message', function (evt) {
+        if (evt.origin !== 'https://embed.diagrams.net') return;
+
+        try {
+            const msg = JSON.parse(evt.data);
+            console.log('Draw.io event:', msg.event);
+
+            if (msg.event === 'configure') {
+                const frame = document.getElementById('drawioFrame');
+                frame.contentWindow.postMessage(JSON.stringify({
+                    action: 'configure',
+                    config: {
+                        defaultFonts: ['Inter', 'Arial', 'Helvetica']
+                    }
+                }), '*');
+            }
+            else if (msg.event === 'init') {
+                const frame = document.getElementById('drawioFrame');
+                const xmlToLoad = initialXml || '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel>';
+                console.log('Loading XML, length:', xmlToLoad.length);
+                frame.contentWindow.postMessage(JSON.stringify({
+                    action: 'load',
+                    xml: xmlToLoad
+                }), '*');
+            }
+            else if (msg.event === 'load') {
+                console.log('Diagram loaded successfully');
+                isLoaded = true;
+                // Скрываем загрузочный экран
+                setTimeout(function () {
+                    const overlay = document.getElementById('loadingOverlay');
+                    if (overlay) {
+                        overlay.style.opacity = '0';
+                        overlay.style.transition = 'opacity 0.3s';
+                        setTimeout(function () { overlay.remove(); }, 300);
+                    }
+                }, 500);
+            }
+            else if (msg.event === 'autosave') {
+                // Autosave содержит XML
+                if (msg.xml && msg.xml.length > 0) {
+                    console.log('Autosave, xml length:', msg.xml.length);
+                    currentXml = msg.xml;
+                    hasChanges = true;
+                    autoSave();
+                }
+            }
+            else if (msg.event === 'save') {
+                // Пользователь нажал Ctrl+S или кнопку сохранения в Draw.io
+                if (msg.xml && msg.xml.length > 0) {
+                    console.log('Save event, xml length:', msg.xml.length);
+                    currentXml = msg.xml;
+                    doSave();
+                }
+            }
+            else if (msg.event === 'export') {
+                console.log('Export event, format:', msg.format, 'data length:', msg.data ? msg.data.length : 0);
+                if (msg.format === 'png' && msg.data) {
+                    savePreview(msg.data);
+                }
+            }
+        } catch (e) {
+            console.error('Error processing message:', e);
+        }
+    });
+
+    function autoSave() {
+        if (saveTimeout) clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(function () {
+            if (currentXml && currentXml.length > 0) {
+                doSave();
+            }
+        }, 3000);
+    }
+
+    function doSave() {
+        if (!currentXml || currentXml.length === 0) {
+            console.log('Nothing to save');
+            return;
+        }
+
+        console.log('Saving diagram, xml length:', currentXml.length);
+        const indicator = document.getElementById('saveIndicator');
+        const saveText = document.getElementById('saveText');
+
+        indicator.className = 'save-indicator saving';
+        saveText.textContent = 'Сохранение...';
+
+        fetch('/diagrams/' + diagramId + '/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ xml: currentXml })
+        })
+            .then(function (r) {
+                return r.json();
+            })
+            .then(function (data) {
+                console.log('Save response:', data);
+                if (data.success) {
+                    hasChanges = false;
+                    indicator.className = 'save-indicator saved';
+                    saveText.textContent = 'Сохранено';
+
+                    // Запрашиваем превью
+                    const frame = document.getElementById('drawioFrame');
+                    frame.contentWindow.postMessage(JSON.stringify({
+                        action: 'export',
+                        format: 'png',
+                        scale: 0.5,
+                        background: '#ffffff'
+                    }), '*');
+
+                    setTimeout(function () {
+                        indicator.className = 'save-indicator';
+                    }, 2000);
+                }
+            })
+            .catch(function (err) {
+                console.error('Save error:', err);
+                indicator.className = 'save-indicator';
+            });
+    }
+
+    function savePreview(previewData) {
+        fetch('/diagrams/' + diagramId + '/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                xml: currentXml,
+                preview: previewData
+            })
+        });
+    }
+
+    window.addEventListener('beforeunload', function (e) {
+        if (hasChanges) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    initDrawio();
+
+    // Fallback - скрыть загрузку через 5 секунд в любом случае
+    setTimeout(function () {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.3s';
+            setTimeout(function () { overlay.remove(); }, 300);
+        }
+    }, 5000);
+</script>
+{% endblock %}

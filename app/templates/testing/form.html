@@ -1,0 +1,310 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ 'Редактирование' if service else 'Новый' }} сервис{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('testing.index') }}" class="text-blue-500 hover:text-blue-600">
+        <i class="fas fa-arrow-left mr-2"></i>Назад к списку
+    </a>
+</div>
+
+<div class="bg-white rounded-2xl shadow-sm p-6">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">
+        {{ 'Редактирование сервиса' if service else 'Новый сервис' }}
+    </h1>
+
+    <!-- Баннер черновика -->
+    <div id="draftBanner" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+            <div class="flex items-center space-x-3">
+                <i class="fas fa-file-alt text-amber-500"></i>
+                <span class="text-amber-800">Найден сохранённый черновик описания</span>
+            </div>
+            <div class="flex space-x-2">
+                <button type="button" onclick="restoreDraft()"
+                    class="px-3 py-1.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 text-sm">
+                    <i class="fas fa-undo mr-1"></i>Восстановить
+                </button>
+                <button type="button" onclick="clearDraft()"
+                    class="px-3 py-1.5 bg-white text-amber-700 border border-amber-300 rounded-lg hover:bg-amber-50 text-sm">
+                    <i class="fas fa-trash mr-1"></i>Удалить
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <form method="POST" class="space-y-6" id="serviceForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Основная информация -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Название *</label>
+                <input type="text" name="name" value="{{ service.name if service else '' }}" required
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Окружение</label>
+                <select name="environment"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none bg-white">
+                    <option value="">Не указано</option>
+                    <option value="dev" {{ 'selected' if service and service.environment=='dev' else '' }}>Development
+                    </option>
+                    <option value="test" {{ 'selected' if service and service.environment=='test' else '' }}>Test
+                    </option>
+                    <option value="staging" {{ 'selected' if service and service.environment=='staging' else '' }}>
+                        Staging</option>
+                    <option value="prod" {{ 'selected' if service and service.environment=='prod' else '' }}>Production
+                    </option>
+                </select>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">URL сервиса</label>
+                <input type="url" name="url" value="{{ service.url if service else '' }}"
+                    placeholder="https://example.com"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Иконка (FontAwesome)</label>
+                <input type="text" name="icon" value="{{ service.icon if service else 'server' }}" placeholder="server"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+                <p class="text-xs text-gray-500 mt-1">Например: server, database, cloud, lock, key</p>
+            </div>
+        </div>
+
+        <!-- Markdown описание -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Описание</label>
+            <textarea name="description" id="description">{{ service.description if service else '' }}</textarea>
+        </div>
+
+        <!-- Кастомные поля -->
+        <div class="pt-4 border-t">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Параметры сервиса</label>
+                    <p class="text-xs text-gray-500 mt-0.5">Адреса, порты, логины, пароли и т.д.</p>
+                </div>
+                <button type="button" onclick="addField()"
+                    class="px-4 py-2 bg-blue-500 text-white text-sm rounded-xl hover:bg-blue-600">
+                    <i class="fas fa-plus mr-1"></i>Добавить поле
+                </button>
+            </div>
+
+            <div id="customFields" class="space-y-3">
+                {% if service %}
+                {% for field in service.get_custom_fields() %}
+                <div class="field-row flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                    <div class="flex-1 grid grid-cols-1 md:grid-cols-12 gap-2">
+                        <input type="text" name="field_name[]" value="{{ field.name }}" placeholder="Название"
+                            class="md:col-span-3 px-3 py-2 border border-gray-200 rounded-lg focus:border-blue-500 outline-none text-sm">
+                        <input type="text" name="field_value[]" value="{{ field.value }}" placeholder="Значение"
+                            class="md:col-span-6 px-3 py-2 border border-gray-200 rounded-lg focus:border-blue-500 outline-none text-sm font-mono">
+                        <select name="field_type[]"
+                            class="md:col-span-3 px-3 py-2 border border-gray-200 rounded-lg focus:border-blue-500 outline-none text-sm bg-white">
+                            <option value="text" {{ 'selected' if field.type=='text' else '' }}>Текст</option>
+                            <option value="link" {{ 'selected' if field.type=='link' else '' }}>Ссылка</option>
+                            <option value="email" {{ 'selected' if field.type=='email' else '' }}>Email</option>
+                            <option value="password" {{ 'selected' if field.type=='password' else '' }}>Пароль</option>
+                            <option value="code" {{ 'selected' if field.type=='code' else '' }}>Код/Путь</option>
+                        </select>
+                    </div>
+                    <input type="hidden" name="field_icon[]" value="">
+                    <button type="button" onclick="removeField(this)"
+                        class="p-2 text-red-400 hover:text-red-600 rounded-lg">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+
+            <div id="emptyFieldsMessage"
+                class="{% if service and service.get_custom_fields() %}hidden{% endif %} text-center py-6 text-gray-400 border-2 border-dashed border-gray-200 rounded-xl mt-3">
+                <i class="fas fa-list-ul text-xl mb-2"></i>
+                <p class="text-sm">Нажмите "Добавить поле" для создания параметров</p>
+            </div>
+        </div>
+
+        <!-- Статусы -->
+        <div class="flex flex-wrap gap-6 pt-4 border-t">
+            <div class="flex items-center">
+                <input type="checkbox" name="is_active" id="is_active" {{ 'checked' if not service or service.is_active
+                    else '' }} class="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500">
+                <label for="is_active" class="ml-2 text-sm text-gray-700">Активен</label>
+            </div>
+            <div class="flex items-center">
+                <input type="checkbox" name="is_available" id="is_available" {{ 'checked' if not service or
+                    service.is_available else '' }}
+                    class="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500">
+                <label for="is_available" class="ml-2 text-sm text-gray-700">Доступен</label>
+            </div>
+        </div>
+
+        <!-- Кнопки -->
+        <div class="flex justify-end space-x-4 pt-4 border-t">
+            <a href="{{ url_for('testing.index') }}"
+                class="px-6 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">Отмена</a>
+            <button type="submit"
+                class="px-6 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors">
+                {{ 'Сохранить' if service else 'Создать' }}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+<script>
+    const DRAFT_KEY = 'service-description-{{ service.id if service else "new" }}';
+    let savedDraft = null;
+
+    // Проверяем черновик ДО инициализации редактора
+    (function () {
+        const draft = localStorage.getItem('smde_' + DRAFT_KEY);
+        const currentContent = `{{ service.description|default("", true)|replace("\n", "\\n")|replace("\r", "")|replace("'", "\\'")|replace('"', '\\"') }}`;
+        if (draft && draft !== currentContent && draft.trim() !== '') {
+            savedDraft = draft;
+            document.getElementById('draftBanner').classList.remove('hidden');
+        }
+    })();
+
+    // Инициализация EasyMDE (точно как в новостях)
+    const easyMDE = new EasyMDE({
+        element: document.getElementById('description'),
+        spellChecker: false,
+        autosave: {
+            enabled: true,
+            uniqueId: DRAFT_KEY,
+            delay: 1000
+        },
+        toolbar: [
+            'bold', 'italic', 'heading', '|',
+            'quote', 'unordered-list', 'ordered-list', '|',
+            'link', {
+                name: 'upload-image',
+                action: function (editor) {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.onchange = function () {
+                        const file = input.files[0];
+                        if (file) {
+                            uploadImage(file, editor);
+                        }
+                    };
+                    input.click();
+                },
+                className: 'fa fa-image',
+                title: 'Загрузить изображение'
+            }, 'table', '|',
+            'preview', 'side-by-side', 'fullscreen', '|',
+            'guide'
+        ],
+        placeholder: 'Опишите сервис...',
+        status: ['autosave', 'lines', 'words'],
+        minHeight: '300px'
+    });
+
+    function restoreDraft() {
+        if (savedDraft) {
+            easyMDE.value(savedDraft);
+            document.getElementById('draftBanner').classList.add('hidden');
+        }
+    }
+
+    function clearDraft() {
+        localStorage.removeItem('smde_' + DRAFT_KEY);
+        savedDraft = null;
+        document.getElementById('draftBanner').classList.add('hidden');
+    }
+
+    function uploadImage(file, editor) {
+        const formData = new FormData();
+        formData.append('image', file);
+
+        const cm = editor.codemirror;
+        const pos = cm.getCursor();
+        cm.replaceRange('![Загрузка...]() ', pos);
+
+        fetch('{{ url_for("testing.upload_image") }}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const content = cm.getValue();
+                    const newContent = content.replace('![Загрузка...]() ', `![${file.name}](${data.url})`);
+                    cm.setValue(newContent);
+                } else {
+                    alert('Ошибка загрузки: ' + (data.error || 'Неизвестная ошибка'));
+                    const content = cm.getValue();
+                    cm.setValue(content.replace('![Загрузка...]() ', ''));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ошибка загрузки изображения');
+                const content = cm.getValue();
+                cm.setValue(content.replace('![Загрузка...]() ', ''));
+            });
+    }
+
+    // Кастомные поля
+    function updateEmptyMessage() {
+        const container = document.getElementById('customFields');
+        const message = document.getElementById('emptyFieldsMessage');
+        message.classList.toggle('hidden', container.children.length > 0);
+    }
+
+    function addField() {
+        const container = document.getElementById('customFields');
+        const row = document.createElement('div');
+        row.className = 'field-row flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200';
+        row.innerHTML = `
+            <div class="flex-1 grid grid-cols-1 md:grid-cols-12 gap-2">
+                <input type="text" name="field_name[]" placeholder="Название"
+                    class="md:col-span-3 px-3 py-2 border border-gray-200 rounded-lg focus:border-blue-500 outline-none text-sm">
+                <input type="text" name="field_value[]" placeholder="Значение"
+                    class="md:col-span-6 px-3 py-2 border border-gray-200 rounded-lg focus:border-blue-500 outline-none text-sm font-mono">
+                <select name="field_type[]"
+                    class="md:col-span-3 px-3 py-2 border border-gray-200 rounded-lg focus:border-blue-500 outline-none text-sm bg-white">
+                    <option value="text">Текст</option>
+                    <option value="link">Ссылка</option>
+                    <option value="email">Email</option>
+                    <option value="password">Пароль</option>
+                    <option value="code">Код/Путь</option>
+                </select>
+            </div>
+            <input type="hidden" name="field_icon[]" value="">
+            <button type="button" onclick="removeField(this)" class="p-2 text-red-400 hover:text-red-600 rounded-lg">
+                <i class="fas fa-trash"></i>
+            </button>
+        `;
+        container.appendChild(row);
+        updateEmptyMessage();
+        row.querySelector('input[name="field_name[]"]').focus();
+    }
+
+    function removeField(btn) {
+        btn.closest('.field-row').remove();
+        updateEmptyMessage();
+    }
+
+    // Инициализация
+    updateEmptyMessage();
+</script>
+{% endblock %}

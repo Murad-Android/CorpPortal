@@ -1,0 +1,165 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Дашборд | Админ-панель{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <a href="{{ url_for('main.index') }}" class="inline-flex items-center text-blue-500 hover:text-blue-600 mb-4">
+        <i class="fas fa-arrow-left mr-2"></i>На портал
+    </a>
+    <h1 class="text-2xl font-bold text-gray-800">Дашборд</h1>
+    <p class="text-gray-600">Обзор системы и статистика</p>
+</div>
+
+<!-- Stats Grid -->
+<div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
+    {% if current_user.is_admin %}
+    <div class="card-stat bg-white rounded-2xl p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <i class="fas fa-user-shield text-blue-500 text-xl"></i>
+            </div>
+        </div>
+        <p class="text-2xl font-bold text-gray-800">{{ stats.users }}</p>
+        <p class="text-sm text-gray-500">Пользователей</p>
+    </div>
+    {% endif %}
+
+    {% if current_user.has_permission('all') or current_user.has_permission('news') %}
+    <div class="card-stat bg-white rounded-2xl p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+            <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                <i class="fas fa-newspaper text-purple-500 text-xl"></i>
+            </div>
+        </div>
+        <p class="text-2xl font-bold text-gray-800">{{ stats.news }}</p>
+        <p class="text-sm text-gray-500">Новостей</p>
+    </div>
+    {% endif %}
+
+    {% if current_user.has_permission('all') or current_user.has_permission('vacancies') %}
+    <div class="card-stat bg-white rounded-2xl p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+            <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                <i class="fas fa-briefcase text-amber-500 text-xl"></i>
+            </div>
+        </div>
+        <p class="text-2xl font-bold text-gray-800">{{ stats.vacancies }}</p>
+        <p class="text-sm text-gray-500">Вакансий</p>
+    </div>
+    {% endif %}
+
+    {% if current_user.has_permission('all') or current_user.has_permission('passes') %}
+    <div class="card-stat bg-white rounded-2xl p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+            <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
+                <i class="fas fa-id-card text-yellow-500 text-xl"></i>
+            </div>
+        </div>
+        <p class="text-2xl font-bold text-gray-800">{{ stats.pending_passes }}</p>
+        <p class="text-sm text-gray-500">Заявок на пропуск</p>
+    </div>
+    {% endif %}
+
+    {% if current_user.has_permission('all') or current_user.has_permission('orders') %}
+    <div class="card-stat bg-white rounded-2xl p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+            <div class="w-12 h-12 bg-pink-100 rounded-xl flex items-center justify-center">
+                <i class="fas fa-shopping-cart text-pink-500 text-xl"></i>
+            </div>
+        </div>
+        <p class="text-2xl font-bold text-gray-800">{{ stats.pending_orders }}</p>
+        <p class="text-sm text-gray-500">Заявок на заказ</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="grid lg:grid-cols-2 gap-6">
+    <!-- Recent Pass Requests -->
+    {% if current_user.has_permission('all') or current_user.has_permission('passes') %}
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-gray-100 flex items-center justify-between">
+            <h2 class="font-semibold text-gray-800">Последние заявки на пропуск</h2>
+            <a href="{{ url_for('admin.passes') }}" class="text-blue-500 hover:text-blue-600 text-sm">
+                Все заявки <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+        <div class="divide-y divide-gray-100">
+            {% for req in recent_passes %}
+            <div class="p-4 flex items-center justify-between">
+                <div>
+                    <p class="font-medium text-gray-800">{{ req.visitor_name }}</p>
+                    <p class="text-sm text-gray-500">{{ req.visit_date.strftime('%d.%m.%Y') }}</p>
+                </div>
+                <span class="px-2 py-1 rounded-full text-xs font-medium
+                    {% if req.status == 'pending' %}bg-yellow-100 text-yellow-700
+                    {% elif req.status == 'approved' %}bg-green-100 text-green-700
+                    {% else %}bg-red-100 text-red-700{% endif %}">
+                    {{ req.status }}
+                </span>
+            </div>
+            {% else %}
+            <div class="p-8 text-center text-gray-500">Нет заявок</div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Order Requests -->
+    {% if current_user.has_permission('all') or current_user.has_permission('orders') %}
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-gray-100 flex items-center justify-between">
+            <h2 class="font-semibold text-gray-800">Последние заявки на заказ</h2>
+            <a href="{{ url_for('admin.orders') }}" class="text-blue-500 hover:text-blue-600 text-sm">
+                Все заявки <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+        <div class="divide-y divide-gray-100">
+            {% for req in recent_orders %}
+            <div class="p-4 flex items-center justify-between">
+                <div>
+                    <p class="font-medium text-gray-800">{{ req.item_name }}</p>
+                    <p class="text-sm text-gray-500">{{ req.department }} • {{ req.quantity }} шт.</p>
+                </div>
+                <span class="px-2 py-1 rounded-full text-xs font-medium
+                    {% if req.status == 'pending' %}bg-yellow-100 text-yellow-700
+                    {% elif req.status == 'delivered' %}bg-green-100 text-green-700
+                    {% else %}bg-blue-100 text-blue-700{% endif %}">
+                    {{ req.status }}
+                </span>
+            </div>
+            {% else %}
+            <div class="p-8 text-center text-gray-500">Нет заявок</div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Recent Activity - Only for admins -->
+{% if current_user.is_admin %}
+<div class="mt-6 bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="p-5 border-b border-gray-100">
+        <h2 class="font-semibold text-gray-800">Последние действия</h2>
+    </div>
+    <div class="divide-y divide-gray-100">
+        {% for log in recent_logs %}
+        <div class="p-4 flex items-center space-x-4">
+            <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-history text-gray-500"></i>
+            </div>
+            <div class="flex-1">
+                <p class="text-gray-800">
+                    <span class="font-medium">{{ log.user.username if log.user else 'Система' }}</span>
+                    — {{ log.action }}
+                </p>
+                <p class="text-sm text-gray-500">{{ log.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
+            </div>
+        </div>
+        {% else %}
+        <div class="p-8 text-center text-gray-500">Нет записей</div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

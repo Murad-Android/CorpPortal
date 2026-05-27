@@ -1,0 +1,173 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ 'Редактирование' if article else 'Создание' }} новости | Админ-панель{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('admin.news') }}" class="text-blue-500 hover:text-blue-600">
+        <i class="fas fa-arrow-left mr-2"></i>Назад к списку
+    </a>
+</div>
+
+<div class="bg-white rounded-2xl shadow-sm p-6">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">
+        {{ 'Редактирование новости' if article else 'Новая новость' }}
+    </h1>
+
+    <form method="POST" enctype="multipart/form-data" class="space-y-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Заголовок *</label>
+            <input type="text" name="title" value="{{ article.title if article else '' }}" required
+                class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Краткое описание</label>
+            <textarea name="short_description" rows="2"
+                class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none resize-none">{{ article.short_description if article else '' }}</textarea>
+        </div>
+
+        <!-- Обложка новости -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Обложка новости</label>
+            {% if article and article.image %}
+            <div class="mb-3">
+                <img src="{{ url_for('static', filename='uploads/news/' + article.image) }}" alt="Текущая обложка"
+                    class="max-w-md rounded-lg shadow-sm">
+                <div class="mt-2">
+                    <label class="flex items-center text-sm text-gray-600">
+                        <input type="checkbox" name="remove_image" class="mr-2">
+                        Удалить текущую обложку
+                    </label>
+                </div>
+            </div>
+            {% endif %}
+            <input type="file" name="cover_image" accept="image/*"
+                class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            <p class="text-xs text-gray-500 mt-1">Рекомендуемый размер: 1200x630px. Форматы: JPG, PNG, WebP</p>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Содержание</label>
+            <textarea name="content" id="content">{{ article.content if article else '' }}</textarea>
+        </div>
+
+        <div class="flex flex-wrap gap-6">
+            <div class="flex items-center">
+                <input type="checkbox" name="is_published" id="is_published" {{ 'checked' if not article or
+                    article.is_published else '' }}
+                    class="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500">
+                <label for="is_published" class="ml-2 text-sm text-gray-700">Опубликовать</label>
+            </div>
+            <div class="flex items-center">
+                <input type="checkbox" name="is_pinned" id="is_pinned" {{ 'checked' if article and article.is_pinned
+                    else '' }} class="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500">
+                <label for="is_pinned" class="ml-2 text-sm text-gray-700">Закрепить</label>
+            </div>
+            <div class="flex items-center">
+                <input type="checkbox" name="comments_enabled" id="comments_enabled" {{ 'checked' if not article or
+                    article.comments_enabled else '' }}
+                    class="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500">
+                <label for="comments_enabled" class="ml-2 text-sm text-gray-700">Разрешить комментарии</label>
+            </div>
+        </div>
+
+        <div class="flex justify-end space-x-4 pt-4 border-t">
+            <a href="{{ url_for('admin.news') }}"
+                class="px-6 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
+                Отмена
+            </a>
+            <button type="submit"
+                class="px-6 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors">
+                {{ 'Сохранить' if article else 'Создать' }}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+<script>
+    const easyMDE = new EasyMDE({
+        element: document.getElementById('content'),
+        spellChecker: false,
+        autosave: {
+            enabled: true,
+            uniqueId: 'news-content-{{ article.id if article else "new" }}',
+            delay: 1000
+        },
+        toolbar: [
+            'bold', 'italic', 'heading', '|',
+            'quote', 'unordered-list', 'ordered-list', '|',
+            'link', {
+                name: 'upload-image',
+                action: function (editor) {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.onchange = function () {
+                        const file = input.files[0];
+                        if (file) {
+                            uploadImage(file, editor);
+                        }
+                    };
+                    input.click();
+                },
+                className: 'fa fa-image',
+                title: 'Загрузить изображение'
+            }, 'table', '|',
+            'preview', 'side-by-side', 'fullscreen', '|',
+            'guide'
+        ],
+        placeholder: 'Напишите содержание новости...',
+        status: ['autosave', 'lines', 'words'],
+        minHeight: '300px'
+    });
+
+    function uploadImage(file, editor) {
+        const formData = new FormData();
+        formData.append('image', file);
+
+        // Показываем индикатор загрузки
+        const cm = editor.codemirror;
+        const pos = cm.getCursor();
+        cm.replaceRange('![Загрузка...]() ', pos);
+
+        fetch('{{ url_for("admin.upload_news_image") }}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Заменяем текст загрузки на реальную ссылку
+                    const content = cm.getValue();
+                    const newContent = content.replace('![Загрузка...]() ', `![${file.name}](${data.url})`);
+                    cm.setValue(newContent);
+                } else {
+                    alert('Ошибка загрузки: ' + (data.error || 'Неизвестная ошибка'));
+                    // Удаляем текст загрузки
+                    const content = cm.getValue();
+                    const newContent = content.replace('![Загрузка...]() ', '');
+                    cm.setValue(newContent);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ошибка загрузки изображения');
+                // Удаляем текст загрузки
+                const content = cm.getValue();
+                const newContent = content.replace('![Загрузка...]() ', '');
+                cm.setValue(newContent);
+            });
+    }
+</script>
+{% endblock %}

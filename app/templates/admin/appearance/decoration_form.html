@@ -1,0 +1,241 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ 'Редактирование' if decoration else 'Новое' }} украшение | Админ-панель{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+    <div class="mb-6">
+        <a href="{{ url_for('appearance.decorations') }}" class="text-blue-500 hover:text-blue-600">
+            <i class="fas fa-arrow-left mr-2"></i>Назад к списку
+        </a>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm p-6">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">
+            {{ 'Редактирование украшения' if decoration else 'Новое украшение' }}
+        </h1>
+
+        <form method="POST" class="space-y-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Название *</label>
+                <input type="text" name="name" value="{{ decoration.name if decoration else '' }}" required
+                    placeholder="Например: Новогодняя гирлянда 2026"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Тип украшения *</label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {% for type_key, type_info in decoration_types.items() %}
+                    <label class="relative cursor-pointer">
+                        <input type="radio" name="decoration_type" value="{{ type_key }}" {{ 'checked' if decoration and
+                            decoration.decoration_type==type_key else '' }} {{ 'checked' if not decoration and
+                            loop.first else '' }} class="sr-only peer">
+                        <div
+                            class="p-4 border-2 border-gray-200 rounded-xl peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all">
+                            <div class="flex items-center space-x-3">
+                                <div
+                                    class="w-10 h-10 bg-gray-100 peer-checked:bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-{{ type_info.icon }} text-gray-500 peer-checked:text-blue-500"></i>
+                                </div>
+                                <div>
+                                    <p class="font-medium text-gray-800">{{ type_info.name }}</p>
+                                    <p class="text-xs text-gray-500">{{ type_info.description }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="p-4 bg-gray-50 rounded-xl">
+                <div class="flex items-center mb-4">
+                    <input type="checkbox" name="is_always_active" id="is_always_active" {{ 'checked' if decoration and
+                        decoration.is_always_active else '' }}
+                        class="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500"
+                        onchange="toggleDateFields()">
+                    <label for="is_always_active" class="ml-2 text-sm text-gray-700">Всегда активно</label>
+                </div>
+
+                <div id="dateFields"
+                    class="grid grid-cols-2 gap-4 {{ 'hidden' if decoration and decoration.is_always_active else '' }}">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Дата начала</label>
+                        <input type="date" name="start_date"
+                            value="{{ decoration.start_date.strftime('%Y-%m-%d') if decoration and decoration.start_date else '' }}"
+                            class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Дата окончания</label>
+                        <input type="date" name="end_date"
+                            value="{{ decoration.end_date.strftime('%Y-%m-%d') if decoration and decoration.end_date else '' }}"
+                            class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Украшение будет показываться только в указанный период
+                </p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Скорость анимации (мс)</label>
+                <input type="number" name="speed"
+                    value="{{ decoration.get_settings().get('speed', '500') if decoration else '500' }}" min="100"
+                    max="2000" step="100"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+                <p class="text-xs text-gray-500 mt-1">Для гирлянды — скорость мигания. Меньше = быстрее.</p>
+            </div>
+
+            <div id="positionField">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Расположение (для гирлянды)</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="relative cursor-pointer">
+                        <input type="radio" name="position" value="above" {{ 'checked' if not decoration or
+                            decoration.position=='above' else '' }} class="sr-only peer">
+                        <div
+                            class="p-4 border-2 border-gray-200 rounded-xl peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all text-center">
+                            <i class="fas fa-arrow-up text-2xl mb-2 text-gray-400 peer-checked:text-blue-500"></i>
+                            <p class="font-medium text-gray-800">Над меню</p>
+                            <p class="text-xs text-gray-500">Меню сдвигается вниз</p>
+                        </div>
+                    </label>
+                    <label class="relative cursor-pointer">
+                        <input type="radio" name="position" value="overlay" {{ 'checked' if decoration and
+                            decoration.position=='overlay' else '' }} class="sr-only peer">
+                        <div
+                            class="p-4 border-2 border-gray-200 rounded-xl peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all text-center">
+                            <i class="fas fa-layer-group text-2xl mb-2 text-gray-400 peer-checked:text-blue-500"></i>
+                            <p class="font-medium text-gray-800">Поверх меню</p>
+                            <p class="text-xs text-gray-500">Накладывается на меню</p>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div id="bgColorField">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Цвет фона гирлянды</label>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center">
+                        <input type="checkbox" name="use_bg_color" id="use_bg_color" {{ 'checked' if decoration and
+                            decoration.get_settings().get('bg_color') else '' }}
+                            class="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500"
+                            onchange="toggleBgColor()">
+                        <label for="use_bg_color" class="ml-2 text-sm text-gray-700">Использовать фон</label>
+                    </div>
+                    <div id="bgColorPicker"
+                        class="flex items-center space-x-2 {{ 'hidden' if not decoration or not decoration.get_settings().get('bg_color') else '' }}">
+                        <input type="color" name="bg_color" id="bg_color_input"
+                            value="{{ decoration.get_settings().get('bg_color', '#1a1a2e') if decoration else '#1a1a2e' }}"
+                            class="w-10 h-10 rounded-lg cursor-pointer border border-gray-200">
+                        <input type="text" id="bg_color_text"
+                            value="{{ decoration.get_settings().get('bg_color', '#1a1a2e') if decoration else '#1a1a2e' }}"
+                            class="w-24 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                            onchange="document.getElementById('bg_color_input').value = this.value">
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Без фона гирлянда будет прозрачной. С фоном — появится градиент выбранного цвета.
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    <span class="text-xs text-gray-500">Быстрый выбор:</span>
+                    <button type="button" onclick="setBgColor('#1a1a2e')"
+                        class="w-6 h-6 rounded bg-[#1a1a2e] border border-gray-300" title="Тёмно-синий"></button>
+                    <button type="button" onclick="setBgColor('#0f172a')"
+                        class="w-6 h-6 rounded bg-[#0f172a] border border-gray-300" title="Тёмный"></button>
+                    <button type="button" onclick="setBgColor('#1e3a5f')"
+                        class="w-6 h-6 rounded bg-[#1e3a5f] border border-gray-300" title="Синий"></button>
+                    <button type="button" onclick="setBgColor('#2d1b4e')"
+                        class="w-6 h-6 rounded bg-[#2d1b4e] border border-gray-300" title="Фиолетовый"></button>
+                    <button type="button" onclick="setBgColor('#1a2e1a')"
+                        class="w-6 h-6 rounded bg-[#1a2e1a] border border-gray-300" title="Тёмно-зелёный"></button>
+                    <button type="button" onclick="setBgColor('#3d1a1a')"
+                        class="w-6 h-6 rounded bg-[#3d1a1a] border border-gray-300" title="Тёмно-красный"></button>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Кастомный курсор</label>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {% for cursor_key, cursor_info in cursor_types.items() %}
+                    <label class="relative cursor-pointer">
+                        <input type="radio" name="cursor_type" value="{{ cursor_key }}" {{ 'checked' if decoration and
+                            decoration.get_settings().get('cursor_type')==cursor_key else '' }} {{ 'checked' if (not
+                            decoration or not decoration.get_settings().get('cursor_type')) and cursor_key=='default'
+                            else '' }} class="sr-only peer">
+                        <div
+                            class="p-3 border-2 border-gray-200 rounded-xl peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all text-center">
+                            <span class="text-2xl mb-1 block">
+                                {% if cursor_key == 'default' %}🖱️
+                                {% elif cursor_key == 'snowflake' %}❄️
+                                {% elif cursor_key == 'flower' %}🌸
+                                {% elif cursor_key == 'heart' %}❤️
+                                {% elif cursor_key == 'star' %}⭐
+                                {% elif cursor_key == 'leaf' %}🍂
+                                {% endif %}
+                            </span>
+                            <p class="text-sm font-medium text-gray-800">{{ cursor_info.name }}</p>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+                <p class="text-xs text-gray-500 mt-2">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Курсор будет применён ко всему сайту, пока украшение активно
+                </p>
+            </div>
+
+            <div class="flex items-center">
+                <input type="checkbox" name="is_enabled" id="is_enabled" {{ 'checked' if not decoration or
+                    decoration.is_enabled else '' }}
+                    class="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500">
+                <label for="is_enabled" class="ml-2 text-sm text-gray-700">Включено</label>
+            </div>
+
+            <div class="flex justify-between pt-4 border-t">
+                <a href="{{ url_for('appearance.decoration_preview', decoration_type=decoration.decoration_type if decoration else 'garland') }}"
+                    target="_blank" class="px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 text-gray-700">
+                    <i class="fas fa-eye mr-2"></i>Предпросмотр
+                </a>
+                <div class="space-x-2">
+                    <a href="{{ url_for('appearance.decorations') }}"
+                        class="px-6 py-2 border border-gray-300 rounded-xl hover:bg-gray-50">Отмена</a>
+                    <button type="submit" class="px-6 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">
+                        {{ 'Сохранить' if decoration else 'Создать' }}
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function toggleDateFields() {
+        const checkbox = document.getElementById('is_always_active');
+        const dateFields = document.getElementById('dateFields');
+        dateFields.classList.toggle('hidden', checkbox.checked);
+    }
+
+    function toggleBgColor() {
+        const checkbox = document.getElementById('use_bg_color');
+        const picker = document.getElementById('bgColorPicker');
+        picker.classList.toggle('hidden', !checkbox.checked);
+    }
+
+    function setBgColor(color) {
+        document.getElementById('bg_color_input').value = color;
+        document.getElementById('bg_color_text').value = color;
+        document.getElementById('use_bg_color').checked = true;
+        document.getElementById('bgColorPicker').classList.remove('hidden');
+    }
+
+    // Синхронизация color picker и текстового поля
+    document.getElementById('bg_color_input')?.addEventListener('input', function () {
+        document.getElementById('bg_color_text').value = this.value;
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Новости{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <a href="{{ url_for('main.index') }}" class="inline-flex items-center text-blue-500 hover:text-blue-600 mb-4">
+        <i class="fas fa-arrow-left mr-2"></i>На главную
+    </a>
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">Новости компании</h1>
+
+    <div class="space-y-4">
+        {% for article in news.items %}
+        <a href="{{ url_for('news.detail', id=article.id) }}"
+            class="block bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+            <div class="flex">
+                {% if article.image %}
+                <div class="w-64 h-48 flex-shrink-0">
+                    <img src="{{ url_for('static', filename='uploads/news/' + article.image) }}"
+                        alt="{{ article.title }}" class="w-full h-full object-cover">
+                </div>
+                {% endif %}
+                <div class="flex-1 p-6">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-2">
+                                {% if article.is_pinned %}
+                                <span class="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                                    <i class="fas fa-thumbtack mr-1"></i>Закреплено
+                                </span>
+                                {% endif %}
+                                <span class="text-sm text-gray-500">{{ article.created_at.strftime('%d.%m.%Y') }}</span>
+                                {% if article.comments_enabled %}
+                                <span class="text-sm text-gray-500">
+                                    <i class="fas fa-comment mr-1"></i>{{ article.get_comments_count() }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            <h2 class="text-lg font-semibold text-gray-800 mb-2">{{ article.title }}</h2>
+                            {% if article.short_description %}
+                            <p class="text-gray-600">{{ article.short_description }}</p>
+                            {% endif %}
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-400 ml-4"></i>
+                    </div>
+                </div>
+            </div>
+        </a>
+        {% else %}
+        <div class="bg-white rounded-2xl shadow-sm p-12 text-center">
+            <i class="fas fa-newspaper text-4xl text-gray-300 mb-4"></i>
+            <p class="text-gray-500">Новостей пока нет</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

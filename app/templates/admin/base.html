@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Панель управления{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='fonts/inter.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='fontawesome/css/all.min.css') }}">
+    <style>
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .sidebar-link.active {
+            background: linear-gradient(135deg, #0078D7 0%, #005a9e 100%);
+            color: white;
+        }
+
+        .sidebar-link:hover:not(.active) {
+            background-color: rgba(0, 120, 215, 0.1);
+        }
+
+        .sidebar-mobile {
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-mobile.open {
+            transform: translateX(0);
+        }
+
+        .toast {
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+    {% block head %}{% endblock %}
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+    <!-- Mobile Header -->
+    <header
+        class="lg:hidden fixed top-0 left-0 right-0 bg-slate-800 text-white h-16 flex items-center justify-between px-4 z-40">
+        <button id="sidebar-toggle" class="w-10 h-10 rounded-lg bg-slate-700 flex items-center justify-center"><i
+                class="fas fa-bars"></i></button>
+        <span class="font-semibold">Панель управления</span>
+        <a href="{{ url_for('main.index') }}"
+            class="w-10 h-10 rounded-lg bg-slate-700 flex items-center justify-center"><i class="fas fa-home"></i></a>
+    </header>
+
+    <div id="sidebar-backdrop" class="lg:hidden fixed inset-0 bg-black/50 z-40 hidden"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar"
+        class="fixed top-0 left-0 h-full w-64 bg-slate-800 text-white z-50 transform -translate-x-full lg:translate-x-0 sidebar-mobile">
+        <div class="flex flex-col h-full">
+            <div class="p-4 border-b border-slate-700">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center"><i
+                            class="fas fa-cog text-white"></i></div>
+                    <div>
+                        <h1 class="font-bold">Панель управления</h1>
+                        <p class="text-xs text-slate-400">{{ current_user.role.display_name if current_user.role else
+                            'Пользователь' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="flex-1 overflow-y-auto p-4">
+                <ul class="space-y-1">
+                    <li>
+                        <a href="{{ url_for('admin.index') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if request.endpoint == 'admin.index' %}active{% endif %}">
+                            <i class="fas fa-chart-pie w-5 text-center"></i><span>Дашборд</span>
+                        </a>
+                    </li>
+
+                    {% if current_user.is_admin or current_user.has_permission('users_view') or
+                    current_user.has_permission('users_create') or current_user.has_permission('roles_manage') %}
+                    <li class="pt-4">
+                        <p class="px-4 text-xs font-semibold text-slate-500 uppercase mb-2">Администрирование</p>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.is_admin or current_user.has_permission('users_view') or
+                    current_user.has_permission('users_create') %}
+                    <li>
+                        <a href="{{ url_for('admin.users') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'user' in request.endpoint and 'role' not in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-user-shield w-5 text-center"></i><span>Пользователи</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.is_admin or current_user.has_permission('roles_manage') %}
+                    <li>
+                        <a href="{{ url_for('admin.roles') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'role' in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-user-tag w-5 text-center"></i><span>Роли</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.has_permission('all') or current_user.has_permission('news') or
+                    current_user.has_permission('vacancies') %}
+                    <li class="pt-4">
+                        <p class="px-4 text-xs font-semibold text-slate-500 uppercase mb-2">Контент</p>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.has_permission('all') or current_user.has_permission('news') %}
+                    <li>
+                        <a href="{{ url_for('admin.news') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'news' in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-newspaper w-5 text-center"></i><span>Новости</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.has_permission('all') or current_user.has_permission('vacancies') %}
+                    <li>
+                        <a href="{{ url_for('admin.vacancies') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'vacanc' in request.endpoint and 'referral' not in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-briefcase w-5 text-center"></i><span>Вакансии</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin.referrals') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'referral' in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-candy-cane w-5 text-center"></i><span>Рекомендации</span>
+                            {% set new_referrals = referral_count if referral_count is defined else 0 %}
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.has_permission('all') or current_user.has_permission('news') %}
+                    <li>
+                        <a href="{{ url_for('admin.surveys') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'survey' in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-poll w-5 text-center"></i><span>Опросы</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin.tests') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'test' in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-clipboard-check w-5 text-center"></i><span>Тесты</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.has_permission('all') or current_user.has_permission('vacancies') %}
+                    <li>
+                        <a href="{{ url_for('admin.vacations_hr') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'vacation' in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-umbrella-beach w-5 text-center"></i><span>Отпуска</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.is_admin or current_user.has_permission('security_articles') %}
+                    <li>
+                        <a href="{{ url_for('admin.security') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'security' in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-shield-alt w-5 text-center"></i><span>Безопасность</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.is_admin or current_user.has_permission('password_vault_view') %}
+                    <li>
+                        <a href="{{ url_for('vault.index') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'vault' in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-key w-5 text-center"></i><span>Хранилище паролей</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.is_admin or current_user.has_permission('testing_services_view') %}
+                    <li>
+                        <a href="{{ url_for('testing.index') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'testing' in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-flask w-5 text-center"></i><span>Сервисы тестирования</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.has_permission('all') or current_user.has_permission('passes') or
+                    current_user.has_permission('orders') %}
+                    <li class="pt-4">
+                        <p class="px-4 text-xs font-semibold text-slate-500 uppercase mb-2">Заявки</p>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.has_permission('all') or current_user.has_permission('passes') %}
+                    <li>
+                        <a href="{{ url_for('admin.passes') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'pass' in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-id-card w-5 text-center"></i><span>Пропуска</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.has_permission('all') or current_user.has_permission('orders') %}
+                    <li>
+                        <a href="{{ url_for('admin.orders') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'order' in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-shopping-cart w-5 text-center"></i><span>Заказы</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.is_admin or current_user.has_permission('settings_general') or
+                    current_user.has_permission('settings_ldap') or current_user.has_permission('settings_smtp') or
+                    current_user.has_permission('settings_menu') or current_user.has_permission('logs_view') %}
+                    <li class="pt-4">
+                        <p class="px-4 text-xs font-semibold text-slate-500 uppercase mb-2">Система</p>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.is_admin or current_user.has_permission('settings_general') %}
+                    <li>
+                        <a href="{{ url_for('admin.settings') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if request.endpoint == 'admin.settings' %}active{% endif %}">
+                            <i class="fas fa-cog w-5 text-center"></i><span>Настройки</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin.settings_greetings') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if request.endpoint == 'admin.settings_greetings' %}active{% endif %}">
+                            <i class="fas fa-hand-sparkles w-5 text-center"></i><span>Приветствия</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.is_admin or current_user.has_permission('settings_menu') %}
+                    <li>
+                        <a href="{{ url_for('admin.settings_menu') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'menu' in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-bars w-5 text-center"></i><span>Меню</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.is_admin or current_user.has_permission('settings_ldap') %}
+                    <li>
+                        <a href="{{ url_for('admin.settings_ldap') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'ldap' in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-server w-5 text-center"></i><span>LDAP</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.is_admin or current_user.has_permission('settings_smtp') %}
+                    <li>
+                        <a href="{{ url_for('admin.settings_smtp') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'smtp' in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-envelope w-5 text-center"></i><span>SMTP</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.is_admin or current_user.has_permission('vacations') %}
+                    <li>
+                        <a href="{{ url_for('admin.settings_vacations') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if request.endpoint == 'admin.settings_vacations' %}active{% endif %}">
+                            <i class="fas fa-umbrella-beach w-5 text-center"></i><span>Отпуска</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.is_admin or current_user.has_permission('settings_general') %}
+                    <li>
+                        <a href="{{ url_for('appearance.timezone') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'timezone' in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-clock w-5 text-center"></i><span>Часовой пояс</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('appearance.design') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'design' in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-palette w-5 text-center"></i><span>Дизайн</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('appearance.decorations') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'decoration' in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-magic w-5 text-center"></i><span>Украшения</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.is_admin or current_user.has_permission('logs_view') %}
+                    <li>
+                        <a href="{{ url_for('admin.logs') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'logs' in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-history w-5 text-center"></i><span>Логи</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.is_admin %}
+                    <li>
+                        <a href="{{ url_for('server_update.index') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'server_update' in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-cloud-upload-alt w-5 text-center"></i><span>Обновление сервера</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin.bugtracker_settings') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'bugtracker_settings' in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-bug w-5 text-center"></i><span>Баг-трекер</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if current_user.is_admin %}
+                    <li>
+                        <a href="{{ url_for('admin.documentation') }}"
+                            class="sidebar-link flex items-center space-x-3 px-4 py-3 rounded-xl {% if 'documentation' in request.endpoint %}active{% endif %}">
+                            <i class="fas fa-book w-5 text-center"></i><span>Документация</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+
+            <div class="p-4 border-t border-slate-700">
+                <a href="{{ url_for('main.index') }}"
+                    class="flex items-center space-x-3 px-4 py-3 rounded-xl hover:bg-slate-700">
+                    <i class="fas fa-arrow-left w-5 text-center"></i><span>На портал</span>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <main class="lg:ml-64 min-h-screen pt-16 lg:pt-0">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="fixed top-4 right-4 z-50 space-y-2">
+            {% for category, message in messages %}
+            <div
+                class="toast flex items-center p-4 rounded-xl shadow-lg {% if category == 'error' %}bg-red-500{% elif category == 'success' %}bg-green-500{% else %}bg-blue-500{% endif %} text-white max-w-sm">
+                <i
+                    class="fas {% if category == 'error' %}fa-exclamation-circle{% elif category == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %} mr-3"></i>
+                <span>{{ message }}</span>
+                <button onclick="this.parentElement.remove()" class="ml-4 hover:opacity-75"><i
+                        class="fas fa-times"></i></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <div class="p-4 lg:p-8">{% block content %}{% endblock %}</div>
+    </main>
+
+    <script>
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+
+        function openSidebar() {
+            sidebar.classList.add('open');
+            sidebar.classList.remove('-translate-x-full');
+            sidebarBackdrop.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeSidebar() {
+            sidebar.classList.remove('open');
+            sidebar.classList.add('-translate-x-full');
+            sidebarBackdrop.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+        sidebarToggle?.addEventListener('click', openSidebar);
+        sidebarBackdrop?.addEventListener('click', closeSidebar);
+
+        setTimeout(() => {
+            document.querySelectorAll('.toast').forEach(toast => {
+                toast.style.animation = 'slideIn 0.3s ease reverse forwards';
+                setTimeout(() => toast.remove(), 300);
+            });
+        }, 5000);
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>

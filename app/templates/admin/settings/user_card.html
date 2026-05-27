@@ -1,0 +1,331 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Конструктор карточки | Админ-панель{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('admin.settings_ldap') }}"
+        class="inline-flex items-center text-blue-500 hover:text-blue-600 mb-4">
+        <i class="fas fa-arrow-left mr-2"></i>Назад к LDAP
+    </a>
+    <h1 class="text-2xl font-bold text-gray-800">Конструктор карточки пользователя</h1>
+    <p class="text-gray-600">Настройте отображение полей в профиле сотрудника</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Fields List -->
+    <div class="bg-white rounded-2xl shadow-sm p-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Поля карточки</h2>
+        <p class="text-sm text-gray-600 mb-4">Перетащите для изменения порядка</p>
+
+        <div id="fields-list" class="space-y-2">
+            {% for field in fields %}
+            <div class="field-item flex items-center justify-between p-3 bg-gray-50 rounded-xl cursor-move {{ 'opacity-50' if not field.is_visible }}"
+                data-id="{{ field.id }}">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-grip-vertical text-gray-400"></i>
+                    <div class="w-10 h-10 rounded-lg bg-{{ field.icon_color }}-100 flex items-center justify-center">
+                        {% if field.icon_type == 'fontawesome' %}
+                        <i class="fas {{ field.icon_value }} text-{{ field.icon_color }}-500"></i>
+                        {% elif field.icon_type == 'image' %}
+                        <img src="{{ url_for('static', filename=field.icon_value) }}" class="w-6 h-6 object-contain">
+                        {% endif %}
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-800 text-sm">{{ field.display_name }}</p>
+                        <p class="text-xs text-gray-500">{{ field.field_name }}</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button
+                        onclick="editField({{ field.id }}, '{{ field.field_name }}', '{{ field.display_name }}', '{{ field.icon_type }}', '{{ field.icon_value }}', '{{ field.icon_color }}', '{{ field.section }}', {{ 'true' if field.is_link else 'false' }}, '{{ field.link_prefix or '' }}', {{ 'true' if field.is_visible else 'false' }})"
+                        class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-200">
+                        <i class="fas fa-edit text-sm"></i>
+                    </button>
+                    <form method="POST" class="inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="toggle">
+                        <input type="hidden" name="field_id" value="{{ field.id }}">
+                        <button type="submit"
+                            class="w-8 h-8 bg-{{ 'green' if field.is_visible else 'gray' }}-100 text-{{ 'green' if field.is_visible else 'gray' }}-600 rounded-lg flex items-center justify-center hover:bg-{{ 'green' if field.is_visible else 'gray' }}-200">
+                            <i class="fas fa-{{ 'eye' if field.is_visible else 'eye-slash' }} text-sm"></i>
+                        </button>
+                    </form>
+                    <form method="POST" class="inline" onsubmit="return confirm('Удалить поле?')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="field_id" value="{{ field.id }}">
+                        <button type="submit"
+                            class="w-8 h-8 bg-red-100 text-red-600 rounded-lg flex items-center justify-center hover:bg-red-200">
+                            <i class="fas fa-trash text-sm"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <form id="reorder-form" method="POST" class="hidden">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="reorder">
+        </form>
+    </div>
+
+    <!-- Add/Edit Field -->
+    <div class="bg-white rounded-2xl shadow-sm p-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4" id="form-title">Добавить поле</h2>
+
+        <form method="POST" id="field-form" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" id="form-action" value="add">
+            <input type="hidden" name="field_id" id="form-field-id" value="">
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Поле данных</label>
+                <select name="field_name" id="field_name" required
+                    class="w-full px-3 py-2 border border-gray-200 rounded-lg">
+                    {% for f in user_fields %}
+                    <option value="{{ f.name }}">{{ f.label }} ({{ f.name }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Название для отображения</label>
+                <input type="text" name="display_name" id="display_name" required placeholder="Email"
+                    class="w-full px-3 py-2 border border-gray-200 rounded-lg">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Тип иконки</label>
+                <select name="icon_type" id="icon_type" onchange="toggleIconInput()"
+                    class="w-full px-3 py-2 border border-gray-200 rounded-lg">
+                    <option value="fontawesome">FontAwesome</option>
+                    <option value="image">Изображение/SVG</option>
+                </select>
+            </div>
+
+            <div id="fontawesome-input">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Иконка FontAwesome</label>
+                <select name="icon_value" id="icon_value" class="w-full px-3 py-2 border border-gray-200 rounded-lg">
+                    {% for icon in icons %}
+                    <option value="{{ icon }}">{{ icon }}</option>
+                    {% endfor %}
+                </select>
+                <div class="mt-2 flex flex-wrap gap-2">
+                    {% for icon in icons %}
+                    <button type="button" onclick="selectIcon('{{ icon }}')"
+                        class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-gray-200 icon-btn"
+                        data-icon="{{ icon }}">
+                        <i class="fas {{ icon }} text-gray-600"></i>
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div id="image-input" class="hidden">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Путь к изображению</label>
+                <div class="flex space-x-2">
+                    <input type="text" name="icon_path" id="icon_path" placeholder="icons/my-icon.svg"
+                        class="flex-1 px-3 py-2 border border-gray-200 rounded-lg">
+                    <label class="px-4 py-2 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200">
+                        <i class="fas fa-upload mr-2"></i>Загрузить
+                        <input type="file" id="icon-upload" class="hidden" accept="image/*,.svg">
+                    </label>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">SVG, PNG, JPG до 100x100px</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Цвет иконки</label>
+                <div class="flex flex-wrap gap-2">
+                    {% for color in colors %}
+                    <button type="button" onclick="selectColor('{{ color }}')"
+                        class="w-10 h-10 rounded-lg bg-{{ color }}-100 flex items-center justify-center hover:ring-2 hover:ring-{{ color }}-300 color-btn"
+                        data-color="{{ color }}">
+                        <i class="fas fa-check text-{{ color }}-500 hidden"></i>
+                    </button>
+                    {% endfor %}
+                </div>
+                <input type="hidden" name="icon_color" id="icon_color" value="blue">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Секция</label>
+                <select name="section" id="section" class="w-full px-3 py-2 border border-gray-200 rounded-lg">
+                    <option value="contact">Контакты</option>
+                    <option value="info">Информация</option>
+                    <option value="additional">Дополнительно</option>
+                </select>
+            </div>
+
+            <div class="flex items-center space-x-4">
+                <label class="flex items-center">
+                    <input type="checkbox" name="is_link" id="is_link" onchange="toggleLinkPrefix()"
+                        class="w-4 h-4 text-blue-500 border-gray-300 rounded">
+                    <span class="ml-2 text-sm text-gray-700">Это ссылка</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" name="is_visible" id="is_visible" checked
+                        class="w-4 h-4 text-blue-500 border-gray-300 rounded">
+                    <span class="ml-2 text-sm text-gray-700">Видимое</span>
+                </label>
+            </div>
+
+            <div id="link-prefix-input" class="hidden">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Префикс ссылки</label>
+                <select name="link_prefix" id="link_prefix" class="w-full px-3 py-2 border border-gray-200 rounded-lg">
+                    <option value="mailto:">mailto: (email)</option>
+                    <option value="tel:">tel: (телефон)</option>
+                    <option value="https://">https://</option>
+                    <option value="">Без префикса</option>
+                </select>
+            </div>
+
+            <div class="flex space-x-3 pt-4">
+                <button type="submit" class="flex-1 px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">
+                    <i class="fas fa-save mr-2"></i><span id="submit-text">Добавить</span>
+                </button>
+                <button type="button" onclick="resetForm()" class="px-4 py-2 bg-gray-100 rounded-xl hover:bg-gray-200">
+                    Сбросить
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Preview -->
+<div class="mt-6 bg-white rounded-2xl shadow-sm p-6">
+    <h2 class="text-lg font-semibold text-gray-800 mb-4">Предпросмотр карточки</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {% for field in fields %}
+        {% if field.is_visible %}
+        <div class="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl">
+            <div class="w-12 h-12 bg-{{ field.icon_color }}-100 rounded-xl flex items-center justify-center">
+                {% if field.icon_type == 'fontawesome' %}
+                <i class="fas {{ field.icon_value }} text-{{ field.icon_color }}-500 text-xl"></i>
+                {% elif field.icon_type == 'image' %}
+                <img src="{{ url_for('static', filename=field.icon_value) }}" class="w-6 h-6 object-contain">
+                {% endif %}
+            </div>
+            <div>
+                <p class="text-sm text-gray-500">{{ field.display_name }}</p>
+                <p class="font-medium text-gray-800">Пример значения</p>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+    // Sortable для перетаскивания
+    new Sortable(document.getElementById('fields-list'), {
+        animation: 150,
+        handle: '.fa-grip-vertical',
+        onEnd: function () {
+            const form = document.getElementById('reorder-form');
+            const items = document.querySelectorAll('.field-item');
+            items.forEach(item => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'order[]';
+                input.value = item.dataset.id;
+                form.appendChild(input);
+            });
+            form.submit();
+        }
+    });
+
+    function selectIcon(icon) {
+        document.getElementById('icon_value').value = icon;
+        document.querySelectorAll('.icon-btn').forEach(btn => {
+            btn.classList.remove('ring-2', 'ring-blue-500');
+            if (btn.dataset.icon === icon) {
+                btn.classList.add('ring-2', 'ring-blue-500');
+            }
+        });
+    }
+
+    function selectColor(color) {
+        document.getElementById('icon_color').value = color;
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.querySelector('i').classList.add('hidden');
+            if (btn.dataset.color === color) {
+                btn.querySelector('i').classList.remove('hidden');
+            }
+        });
+    }
+
+    function toggleIconInput() {
+        const type = document.getElementById('icon_type').value;
+        document.getElementById('fontawesome-input').classList.toggle('hidden', type !== 'fontawesome');
+        document.getElementById('image-input').classList.toggle('hidden', type !== 'image');
+    }
+
+    function toggleLinkPrefix() {
+        const isLink = document.getElementById('is_link').checked;
+        document.getElementById('link-prefix-input').classList.toggle('hidden', !isLink);
+    }
+
+    function editField(id, fieldName, displayName, iconType, iconValue, iconColor, section, isLink, linkPrefix, isVisible) {
+        document.getElementById('form-title').textContent = 'Редактировать поле';
+        document.getElementById('form-action').value = 'update';
+        document.getElementById('form-field-id').value = id;
+        document.getElementById('field_name').value = fieldName;
+        document.getElementById('display_name').value = displayName;
+        document.getElementById('icon_type').value = iconType;
+        document.getElementById('icon_value').value = iconValue;
+        document.getElementById('icon_color').value = iconColor;
+        document.getElementById('section').value = section;
+        document.getElementById('is_link').checked = isLink;
+        document.getElementById('link_prefix').value = linkPrefix;
+        document.getElementById('is_visible').checked = isVisible;
+        document.getElementById('submit-text').textContent = 'Сохранить';
+
+        selectColor(iconColor);
+        selectIcon(iconValue);
+        toggleIconInput();
+        toggleLinkPrefix();
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetForm() {
+        document.getElementById('form-title').textContent = 'Добавить поле';
+        document.getElementById('form-action').value = 'add';
+        document.getElementById('form-field-id').value = '';
+        document.getElementById('field-form').reset();
+        document.getElementById('submit-text').textContent = 'Добавить';
+        document.querySelectorAll('.icon-btn').forEach(btn => btn.classList.remove('ring-2', 'ring-blue-500'));
+        document.querySelectorAll('.color-btn i').forEach(i => i.classList.add('hidden'));
+        selectColor('blue');
+    }
+
+    // Загрузка иконки
+    document.getElementById('icon-upload').addEventListener('change', async function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('icon', file);
+
+        const response = await fetch('{{ url_for("admin.upload_card_icon") }}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token() }}' },
+            body: formData
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            document.getElementById('icon_path').value = data.path;
+        } else {
+            alert(data.error || 'Ошибка загрузки');
+        }
+    });
+
+    // Инициализация
+    selectColor('blue');
+</script>
+{% endblock %}

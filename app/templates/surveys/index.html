@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Опросы{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Опросы</h1>
+        <p class="text-gray-500">Примите участие в опросах компании</p>
+    </div>
+
+    {% if surveys %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for item in surveys %}
+        {% set survey = item.survey %}
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden card-hover">
+            <div class="p-6">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                        <i class="fas fa-poll text-blue-600 text-xl"></i>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        {% if survey.is_anonymous %}
+                        <span class="text-purple-500" title="Анонимный"><i class="fas fa-user-secret"></i></span>
+                        {% endif %}
+                        {% if item.voted %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">
+                            <i class="fas fa-check mr-1"></i>Вы проголосовали
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">{{ survey.title }}</h3>
+
+                {% if survey.description %}
+                <p class="text-gray-600 text-sm mb-4 line-clamp-2">{{ survey.description }}</p>
+                {% endif %}
+
+                <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
+                    <span><i class="fas fa-users mr-1"></i>{{ item.total_responses }} ответов</span>
+                    <span><i class="fas fa-list mr-1"></i>{{ survey.questions.count() }} вопросов</span>
+                </div>
+
+                {% if survey.end_date %}
+                <div class="text-sm text-gray-500 mb-4">
+                    <i class="fas fa-clock mr-1"></i>До {{ survey.end_date.strftime('%d.%m.%Y') }}
+                </div>
+                {% endif %}
+
+                <a href="{{ url_for('surveys.detail', id=survey.id) }}"
+                    class="block w-full text-center px-4 py-2 rounded-xl 
+                          {% if item.voted %}bg-gray-100 text-gray-600{% else %}bg-blue-500 text-white hover:bg-blue-600{% endif %}">
+                    {% if item.voted %}
+                    <i class="fas fa-chart-bar mr-2"></i>Посмотреть результаты
+                    {% else %}
+                    <i class="fas fa-vote-yea mr-2"></i>Пройти опрос
+                    {% endif %}
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <div class="mt-8 flex justify-center">
+        <nav class="flex items-center space-x-1">
+            {% for page_num in pagination.iter_pages() %}
+            {% if page_num %}
+            <a href="{{ url_for('surveys.index', page=page_num) }}"
+                class="px-3 py-1 rounded {% if page_num == pagination.page %}bg-blue-500 text-white{% else %}hover:bg-gray-100{% endif %}">
+                {{ page_num }}
+            </a>
+            {% else %}
+            <span class="px-2">...</span>
+            {% endif %}
+            {% endfor %}
+        </nav>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="bg-white rounded-2xl shadow-sm p-12 text-center">
+        <i class="fas fa-poll text-6xl text-gray-300 mb-4"></i>
+        <h3 class="text-xl font-medium text-gray-600 mb-2">Нет доступных опросов</h3>
+        <p class="text-gray-500">Пока нет активных опросов для вашего отдела</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

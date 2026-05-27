@@ -1,0 +1,129 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Настройки отпусков - Панель управления{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Настройки отпусков</h1>
+        <p class="text-gray-500">Управление лимитами и типами отпусков для сотрудников</p>
+    </div>
+
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Ежегодный оплачиваемый отпуск -->
+        <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                    <i class="fas fa-calendar-check text-blue-600 text-xl"></i>
+                </div>
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-800">Ежегодный оплачиваемый отпуск</h2>
+                    <p class="text-sm text-gray-500">Количество дней по умолчанию для всех сотрудников</p>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Количество дней в год
+                    </label>
+                    <input type="number" name="annual_days_default" value="{{ settings.annual_days_default }}" min="0"
+                        max="365" required
+                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <p class="text-xs text-gray-500 mt-1">По умолчанию: 28 дней (стандарт РФ)</p>
+                </div>
+
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-info-circle text-blue-500 mt-1"></i>
+                        <div class="text-sm text-blue-700">
+                            <p class="font-medium mb-1">Как это работает:</p>
+                            <ul class="list-disc list-inside space-y-1">
+                                <li>Каждому сотруднику доступно указанное количество дней в год</li>
+                                <li>При одобрении заявки дни автоматически вычитаются из баланса</li>
+                                <li>Если дни закончились, тип отпуска будет недоступен (серым)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Day Off -->
+        <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
+                        <i class="fas fa-umbrella-beach text-purple-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-800">Day Off</h2>
+                        <p class="text-sm text-gray-500">Дополнительные выходные дни</p>
+                    </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" name="dayoff_enabled" class="sr-only peer" {{ 'checked' if
+                        settings.dayoff_enabled else '' }} onchange="toggleDayOff(this)">
+                    <div
+                        class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600">
+                    </div>
+                </label>
+            </div>
+
+            <div id="dayoff-settings" class="space-y-4 {{ 'opacity-50' if not settings.dayoff_enabled else '' }}">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Количество дней Day Off в год
+                    </label>
+                    <input type="number" name="dayoff_days_limit" value="{{ settings.dayoff_days_limit }}" min="0"
+                        max="365" {{ 'disabled' if not settings.dayoff_enabled else '' }} id="dayoff_days_input"
+                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-100">
+                    <p class="text-xs text-gray-500 mt-1">Доступно для всех сотрудников компании</p>
+                </div>
+
+                <div class="bg-purple-50 border border-purple-200 rounded-xl p-4">
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-lightbulb text-purple-500 mt-1"></i>
+                        <div class="text-sm text-purple-700">
+                            <p class="font-medium mb-1">О Day Off:</p>
+                            <ul class="list-disc list-inside space-y-1">
+                                <li>Day Off появится в выпадающем списке типов отпуска</li>
+                                <li>Сотрудники смогут использовать эти дни по своему усмотрению</li>
+                                <li>Лимит применяется ко всем сотрудникам одинаково</li>
+                                <li>При отключении Day Off исчезнет из списка типов отпуска</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Кнопки -->
+        <div class="flex justify-end gap-3">
+            <a href="{{ url_for('admin.index') }}" class="px-6 py-3 border border-gray-200 rounded-xl hover:bg-gray-50">
+                Отмена
+            </a>
+            <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium">
+                <i class="fas fa-save mr-2"></i>Сохранить настройки
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    function toggleDayOff(checkbox) {
+        const settings = document.getElementById('dayoff-settings');
+        const input = document.getElementById('dayoff_days_input');
+
+        if (checkbox.checked) {
+            settings.classList.remove('opacity-50');
+            input.disabled = false;
+        } else {
+            settings.classList.add('opacity-50');
+            input.disabled = true;
+        }
+    }
+</script>
+{% endblock %}

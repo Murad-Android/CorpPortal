@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Хорошего вечера!</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; height: 100vh; background: #050814; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+    .scene {
+      position: relative; width: 100%; height: 100%;
+      background: linear-gradient(to bottom, #0b0e23 0%, #1c2541 35%, #3a2d5c 60%, #6b4c7a 80%, #d97a6a 92%, #f0a882 100%);
+      overflow: hidden;
+    }
+
+    /* ✨ Звёзды */
+    .star {
+      position: absolute; width: 2px; height: 2px; background: #fff; border-radius: 50%;
+      opacity: 0; animation: twinkle linear forwards;
+      box-shadow: 0 0 4px rgba(255,255,255,0.8);
+    }
+    @keyframes twinkle {
+      0% { opacity: 0; transform: scale(0.8); }
+      30% { opacity: 0.9; transform: scale(1); }
+      70% { opacity: 0.7; transform: scale(1.1); }
+      100% { opacity: 0.5; transform: scale(1); }
+    }
+
+    /* ☀️ Солнце (только vertical + opacity, никаких сдвигов по X) */
+    .sun-wrapper {
+      position: absolute; left: 65%; bottom: 25%; transform: translateX(-50%);
+      z-index: 3;
+      animation: sunSet 7s ease-in-out forwards;
+      will-change: bottom, opacity;
+    }
+    .sun {
+      width: 100px; height: 100px; border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #fff 0%, #ffd700 35%, #ff8c00 70%, #e65c00 100%);
+      box-shadow: 0 0 40px 10px rgba(255, 140, 0, 0.6), 0 0 80px 30px rgba(255, 80, 0, 0.4), inset -10px -10px 20px rgba(180, 40, 0, 0.6);
+      animation: sunPulse 4s ease-in-out infinite alternate;
+    }
+    @keyframes sunSet {
+      0% { bottom: 25%; opacity: 1; }
+      60% { opacity: 1; }
+      100% { bottom: -8%; opacity: 0; }
+    }
+    @keyframes sunPulse {
+      0% { box-shadow: 0 0 40px 10px rgba(255, 140, 0, 0.6), 0 0 80px 30px rgba(255, 80, 0, 0.4); }
+      100% { box-shadow: 0 0 50px 15px rgba(255, 140, 0, 0.7), 0 0 100px 40px rgba(255, 80, 0, 0.5); }
+    }
+
+    /* 🌙 Луна (серп) */
+    .moon-wrapper {
+      position: absolute; left: 30%; bottom: -15%; transform: translateX(-50%);
+      z-index: 3;
+      animation: moonRise 7s 2.5s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+      will-change: bottom, opacity;
+    }
+    .moon {
+      width: 75px; height: 75px; border-radius: 50%;
+      background: transparent;
+      /* box-shadow создаёт форму серпа */
+      box-shadow: -14px 0 0 6px #fffbe6;
+      filter: drop-shadow(0 0 15px rgba(255, 251, 230, 0.6));
+      transform: rotate(-12deg);
+      animation: moonGlow 5s ease-in-out infinite alternate;
+    }
+    @keyframes moonRise {
+      0% { bottom: -15%; opacity: 0; }
+      15% { opacity: 0; }
+      100% { bottom: 35%; opacity: 1; }
+    }
+    @keyframes moonGlow {
+      0% { filter: drop-shadow(0 0 10px rgba(255, 251, 230, 0.3)); }
+      100% { filter: drop-shadow(0 0 25px rgba(255, 251, 230, 0.8)); }
+    }
+
+    /* 🌿 Холм (полностью статичный) */
+    .hill {
+      position: absolute; bottom: 0; left: 0; width: 100%; height: 38%;
+      background: linear-gradient(to top, #0a0f1a, #1a2332, #2d3a4a);
+      clip-path: ellipse(140% 70% at 50% 100%);
+      z-index: 5;
+    }
+    /* Тёплый отблеск заката на кромке */
+    .hill::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(to top, transparent 50%, rgba(240, 168, 130, 0.2));
+      clip-path: inherit;
+    }
+
+    /* 📝 Текст */
+    .message {
+      position: absolute; top: 18%; left: 50%; transform: translateX(-50%);
+      font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 600; color: #e6f2ff;
+      text-shadow: 0 4px 15px rgba(10, 15, 30, 0.7), 0 0 25px rgba(100, 140, 255, 0.25);
+      opacity: 0; z-index: 10; letter-spacing: 1.5px; text-align: center;
+      animation: fadeIn 2s 5.5s forwards;
+    }
+    .message span { font-size: 0.7em; vertical-align: middle; margin-right: 8px; }
+    @keyframes fadeIn { to { opacity: 1; } }
+  </style>
+</head>
+<body>
+  <div class="scene" id="scene">
+    <div class="sun-wrapper"><div class="sun"></div></div>
+    <div class="moon-wrapper"><div class="moon"></div></div>
+    <div class="hill"></div>
+    <div class="message"><span>🌙</span>Хорошего вечера!</div>
+  </div>
+
+  <script>
+    const scene = document.getElementById('scene');
+    const starCount = 80;
+    for (let i = 0; i < starCount; i++) {
+      const star = document.createElement('div');
+      star.className = 'star';
+      const size = Math.random() * 2 + 1;
+      star.style.cssText = `
+        width: ${size}px; height: ${size}px;
+        left: ${Math.random() * 100}%; top: ${Math.random() * 60}%;
+        animation-duration: ${Math.random() * 3 + 2}s;
+        animation-delay: ${Math.random() * 4 + 2}s;
+      `;
+      scene.appendChild(star);
+    }
+  </script>
+</body>
+</html>

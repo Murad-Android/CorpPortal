@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Предпросмотр украшения</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='fonts/inter.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='fontawesome/css/all.min.css') }}">
+    <style>
+        * {
+            font-family: 'Inter', sans-serif
+        }
+
+        body {
+            background: #f1f5f9;
+            min-height: 100vh
+        }
+
+        /* Гирлянда - прозрачный фон */
+        #garland-decoration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 40px;
+            z-index: 10000;
+            pointer-events: none;
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start;
+            padding-top: 5px;
+            background: transparent !important;
+        }
+
+        .garland-bulb {
+            width: 14px;
+            height: 20px;
+            border-radius: 50% 50% 50% 50%/60% 60% 40% 40%;
+            position: relative;
+            animation: glow 1s ease-in-out infinite;
+            filter: drop-shadow(0 0 8px currentColor);
+        }
+
+        .garland-bulb::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 10px;
+            background: #2d3748;
+            border-radius: 2px;
+        }
+
+        .garland-bulb::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+        }
+
+        .garland-bulb:nth-child(5n+1) {
+            background: radial-gradient(circle at 30% 30%, #ff8a8a, #ff4444);
+            color: #ff4444;
+            animation-delay: 0s
+        }
+
+        .garland-bulb:nth-child(5n+2) {
+            background: radial-gradient(circle at 30% 30%, #8affff, #00d4d4);
+            color: #00d4d4;
+            animation-delay: 0.2s
+        }
+
+        .garland-bulb:nth-child(5n+3) {
+            background: radial-gradient(circle at 30% 30%, #ffff8a, #ffcc00);
+            color: #ffcc00;
+            animation-delay: 0.4s
+        }
+
+        .garland-bulb:nth-child(5n+4) {
+            background: radial-gradient(circle at 30% 30%, #8aff8a, #44ff44);
+            color: #44ff44;
+            animation-delay: 0.6s
+        }
+
+        .garland-bulb:nth-child(5n+5) {
+            background: radial-gradient(circle at 30% 30%, #ff8aff, #ff44ff);
+            color: #ff44ff;
+            animation-delay: 0.8s
+        }
+
+        @keyframes glow {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1)
+            }
+
+            50% {
+                opacity: 0.3;
+                transform: scale(0.95)
+            }
+        }
+
+        /* Новогодние шары */
+        .newyear-balls {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            z-index: 9998;
+            pointer-events: none;
+            display: flex;
+            justify-content: space-around;
+            padding: 0 20px;
+            background: transparent !important;
+        }
+
+        .ny-ball {
+            width: 35px;
+            height: 42px;
+            border-radius: 50%;
+            position: relative;
+            top: 5px;
+            animation: swing-ball 3s ease-in-out infinite;
+            transform-origin: top center;
+            cursor: pointer;
+            pointer-events: auto;
+            filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3));
+        }
+
+        .ny-ball::before {
+            content: '';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 12px;
+            background: linear-gradient(180deg, #888, #aaa);
+        }
+
+        .ny-ball::after {
+            content: '';
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 5px;
+            background: linear-gradient(180deg, #ffd700, #ffaa00);
+            border-radius: 2px;
+        }
+
+        .ny-ball:nth-child(6n+1) {
+            background: radial-gradient(circle at 30% 30%, #ff6b6b, #c0392b)
+        }
+
+        .ny-ball:nth-child(6n+2) {
+            background: radial-gradient(circle at 30% 30%, #5dade2, #2980b9);
+            width: 30px;
+            height: 36px
+        }
+
+        .ny-ball:nth-child(6n+3) {
+            background: radial-gradient(circle at 30% 30%, #f4d03f, #f39c12)
+        }
+
+        .ny-ball:nth-child(6n+4) {
+            background: radial-gradient(circle at 30% 30%, #58d68d, #27ae60);
+            width: 38px;
+            height: 46px
+        }
+
+        .ny-ball:nth-child(6n+5) {
+            background: radial-gradient(circle at 30% 30%, #af7ac5, #8e44ad);
+            width: 32px;
+            height: 38px
+        }
+
+        .ny-ball:nth-child(6n+6) {
+            background: radial-gradient(circle at 30% 30%, #ec7063, #c0392b)
+        }
+
+        .ny-ball:nth-child(odd) {
+            animation-delay: 0s
+        }
+
+        .ny-ball:nth-child(even) {
+            animation-delay: 1.5s
+        }
+
+        @keyframes swing-ball {
+
+            0%,
+            100% {
+                transform: rotate(-5deg)
+            }
+
+            50% {
+                transform: rotate(5deg)
+            }
+        }
+
+        .ny-ball:hover {
+            animation: swing-ball-fast 0.4s ease-in-out
+        }
+
+        @keyframes swing-ball-fast {
+
+            0%,
+            100% {
+                transform: rotate(0deg)
+            }
+
+            25% {
+                transform: rotate(-15deg)
+            }
+
+            75% {
+                transform: rotate(15deg)
+            }
+        }
+
+        /* Снежинки */
+        .snowflake {
+            position: fixed;
+            top: -10px;
+            z-index: 9999;
+            color: white;
+            font-size: 1em;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+            animation: fall linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes fall {
+            to {
+                transform: translateY(100vh) rotate(360deg)
+            }
+        }
+
+        /* Сердечки */
+        .heart {
+            position: fixed;
+            z-index: 9999;
+            color: #ef4444;
+            animation: float-up 4s ease-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes float-up {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1)
+            }
+
+            100% {
+                opacity: 0;
+                transform: translateY(-100vh) scale(0.5)
+            }
+        }
+
+        /* Конфетти */
+        .confetti {
+            position: fixed;
+            top: -10px;
+            z-index: 9999;
+            width: 10px;
+            height: 10px;
+            animation: confetti-fall linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes confetti-fall {
+            to {
+                transform: translateY(100vh) rotate(720deg)
+            }
+        }
+    </style>
+</head>
+
+<body>
+    {% if decoration_type == 'garland' %}
+    <div id="garland-decoration">{% for i in range(40) %}<div class="garland-bulb"></div>{% endfor %}</div>
+    {% endif %}
+
+    {% if decoration_type == 'newyear_balls' %}
+    <div class="newyear-balls">{% for i in range(25) %}<div class="ny-ball"></div>{% endfor %}</div>
+    {% endif %}
+
+    <header class="fixed left-0 right-0 bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg z-40"
+        style="top: {% if decoration_type == 'garland' %}40px{% elif decoration_type == 'newyear_balls' %}80px{% else %}0{% endif %};">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
+                        <i class="fas fa-building text-blue-600"></i>
+                    </div>
+                    <span class="text-xl font-bold">Корпоративный портал</span>
+                </div>
+                <nav class="flex items-center space-x-4">
+                    <span class="px-4 py-2 rounded-lg hover:bg-white/10">Главная</span>
+                    <span class="px-4 py-2 rounded-lg hover:bg-white/10">Новости</span>
+                    <span class="px-4 py-2 rounded-lg hover:bg-white/10">Сотрудники</span>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main
+        style="padding-top: {% if decoration_type == 'garland' %}104px{% elif decoration_type == 'newyear_balls' %}144px{% else %}80px{% endif %};"
+        class="p-8">
+        <div class="max-w-4xl mx-auto">
+            <div class="bg-white rounded-2xl shadow-sm p-8 mb-6">
+                <h1 class="text-2xl font-bold text-gray-800 mb-4">Предпросмотр украшения</h1>
+                <p class="text-gray-600 mb-4">Тип: <strong>
+                        {% if decoration_type == 'garland' %}Гирлянда (мигающая)
+                        {% elif decoration_type == 'newyear_balls' %}Новогодние шары
+                        {% elif decoration_type == 'snow' %}Падающий снег
+                        {% elif decoration_type == 'hearts' %}Сердечки
+                        {% elif decoration_type == 'confetti' %}Конфетти
+                        {% elif decoration_type == 'flowers' %}Цветочки
+                        {% elif decoration_type == 'leaves' %}Осенние листья
+                        {% elif decoration_type == 'stars' %}Звёздочки
+                        {% else %}{{ decoration_type }}{% endif %}
+                    </strong></p>
+                <p class="text-gray-500 text-sm">Это демонстрация того, как украшение будет выглядеть на сайте.</p>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm p-8">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Пример контента</h2>
+                <p class="text-gray-600 mb-4">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod
+                    tempor incididunt ut labore et dolore magna aliqua.</p>
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="p-4 bg-blue-50 rounded-xl text-center">
+                        <i class="fas fa-users text-blue-500 text-2xl mb-2"></i>
+                        <p class="text-sm text-gray-600">Сотрудники</p>
+                    </div>
+                    <div class="p-4 bg-green-50 rounded-xl text-center">
+                        <i class="fas fa-newspaper text-green-500 text-2xl mb-2"></i>
+                        <p class="text-sm text-gray-600">Новости</p>
+                    </div>
+                    <div class="p-4 bg-purple-50 rounded-xl text-center">
+                        <i class="fas fa-calendar text-purple-500 text-2xl mb-2"></i>
+                        <p class="text-sm text-gray-600">События</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    {% if decoration_type == 'snow' %}
+    <script>
+        function createSnowflake() {
+            const s = document.createElement('div');
+            s.className = 'snowflake';
+            s.innerHTML = '❄';
+            s.style.left = Math.random() * 100 + 'vw';
+            s.style.fontSize = (Math.random() * 10 + 10) + 'px';
+            s.style.opacity = Math.random() * 0.5 + 0.5;
+            s.style.animationDuration = (Math.random() * 3 + 2) + 's';
+            document.body.appendChild(s);
+            setTimeout(() => s.remove(), 5000);
+        }
+        setInterval(createSnowflake, 100);
+    </script>
+    {% endif %}
+
+    {% if decoration_type == 'hearts' %}
+    <script>
+        function createHeart() {
+            const h = document.createElement('div');
+            h.className = 'heart';
+            h.innerHTML = '❤';
+            h.style.left = Math.random() * 100 + 'vw';
+            h.style.bottom = '0';
+            h.style.fontSize = (Math.random() * 20 + 15) + 'px';
+            h.style.animationDuration = (Math.random() * 2 + 3) + 's';
+            document.body.appendChild(h);
+            setTimeout(() => h.remove(), 5000);
+        }
+        setInterval(createHeart, 300);
+    </script>
+    {% endif %}
+
+    {% if decoration_type == 'confetti' %}
+    <script>
+        const colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
+        function createConfetti() {
+            const c = document.createElement('div');
+            c.className = 'confetti';
+            c.style.left = Math.random() * 100 + 'vw';
+            c.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            c.style.animationDuration = (Math.random() * 2 + 2) + 's';
+            c.style.width = (Math.random() * 8 + 5) + 'px';
+            c.style.height = (Math.random() * 8 + 5) + 'px';
+            document.body.appendChild(c);
+            setTimeout(() => c.remove(), 4000);
+        }
+        setInterval(createConfetti, 50);
+    </script>
+    {% endif %}
+
+    {% if decoration_type == 'flowers' %}
+    <script>
+        const flowerEmojis = ['🌸', '🌺', '🌷', '🌹', '🌻', '💐', '🌼', '🏵️'];
+        function createFlower() {
+            const f = document.createElement('div');
+            f.className = 'flower';
+            f.innerHTML = flowerEmojis[Math.floor(Math.random() * flowerEmojis.length)];
+            f.style.left = Math.random() * 100 + 'vw';
+            f.style.fontSize = (Math.random() * 15 + 15) + 'px';
+            f.style.animationDuration = (Math.random() * 4 + 3) + 's';
+            document.body.appendChild(f);
+            setTimeout(() => f.remove(), 7000);
+        }
+        setInterval(createFlower, 200);
+    </script>
+    <style>
+        .flower {
+            position: fixed;
+            top: -20px;
+            z-index: 9999;
+            pointer-events: none;
+            animation: flower-fall linear infinite
+        }
+
+        @keyframes flower-fall {
+            to {
+                transform: translateY(100vh) rotate(360deg)
+            }
+        }
+    </style>
+    {% endif %}
+
+    {% if decoration_type == 'leaves' %}
+    <script>
+        const leafEmojis = ['🍂', '🍁', '🍃', '🌿'];
+        function createLeaf() {
+            const l = document.createElement('div');
+            l.className = 'leaf';
+            l.innerHTML = leafEmojis[Math.floor(Math.random() * leafEmojis.length)];
+            l.style.left = Math.random() * 100 + 'vw';
+            l.style.fontSize = (Math.random() * 15 + 15) + 'px';
+            l.style.animationDuration = (Math.random() * 5 + 4) + 's';
+            document.body.appendChild(l);
+            setTimeout(() => l.remove(), 9000);
+        }
+        setInterval(createLeaf, 250);
+    </script>
+    <style>
+        .leaf {
+            position: fixed;
+            top: -20px;
+            z-index: 9999;
+            pointer-events: none;
+            animation: leaf-fall linear infinite
+        }
+
+        @keyframes leaf-fall {
+            to {
+                transform: translateY(100vh) rotate(720deg) translateX(50px)
+            }
+        }
+    </style>
+    {% endif %}
+
+    {% if decoration_type == 'stars' %}
+    <script>
+        const starEmojis = ['⭐', '✨', '🌟', '💫'];
+        function createStar() {
+            const s = document.createElement('div');
+            s.className = 'star-particle';
+            s.innerHTML = starEmojis[Math.floor(Math.random() * starEmojis.length)];
+            s.style.left = Math.random() * 100 + 'vw';
+            s.style.top = Math.random() * 100 + 'vh';
+            s.style.fontSize = (Math.random() * 10 + 10) + 'px';
+            s.style.animationDelay = Math.random() * 2 + 's';
+            document.body.appendChild(s);
+            setTimeout(() => s.remove(), 10000);
+        }
+        for (let i = 0; i < 30; i++) setTimeout(createStar, i * 100);
+        setInterval(createStar, 500);
+    </script>
+    <style>
+        .star-particle {
+            position: fixed;
+            z-index: 9999;
+            pointer-events: none;
+            animation: star-twinkle 2s ease-in-out infinite
+        }
+
+        @keyframes star-twinkle {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1)
+            }
+
+            50% {
+                opacity: 0.3;
+                transform: scale(0.5)
+            }
+        }
+    </style>
+    {% endif %}
+</body>
+
+</html>

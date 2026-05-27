@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Добрый день!</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            height: 100vh;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        .scene {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #1e90ff 0%, #4fa3d9 35%, #87ceeb 65%, #a8d8ea 100%);
+            overflow: hidden;
+        }
+
+        .cloud {
+            position: absolute;
+            background: #fff;
+            border-radius: 999px;
+            filter: blur(14px);
+            opacity: 0.85;
+            z-index: 2;
+        }
+
+        .c1 {
+            width: 240px;
+            height: 70px;
+            top: 12%;
+            left: 10%;
+            animation: drift 22s linear infinite;
+        }
+
+        .c2 {
+            width: 180px;
+            height: 55px;
+            top: 28%;
+            right: 15%;
+            animation: drift 26s linear infinite reverse;
+        }
+
+        .c3 {
+            width: 140px;
+            height: 45px;
+            top: 45%;
+            left: 65%;
+            animation: drift 19s linear infinite;
+        }
+
+        @keyframes drift {
+            from {
+                transform: translateX(-40px);
+            }
+
+            to {
+                transform: translateX(40px);
+            }
+        }
+
+        .sun-wrapper {
+            position: absolute;
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 3;
+            animation: floatSun 6s ease-in-out infinite alternate;
+        }
+
+        .sun {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #ffffff 0%, #fff8dc 25%, #ffe066 55%, #ffd700 100%);
+            box-shadow: 0 0 50px 15px rgba(255, 215, 0, 0.5), 0 0 100px 40px rgba(255, 255, 240, 0.35), inset -8px -10px 20px rgba(200, 150, 0, 0.4);
+            animation: pulseSun 4s ease-in-out infinite alternate;
+        }
+
+        .sun::before {
+            content: '';
+            position: absolute;
+            top: 22%;
+            left: 26%;
+            width: 24%;
+            height: 24%;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            filter: blur(3px);
+        }
+
+        .hill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 35%;
+            background: linear-gradient(to top, #1b5e20, #388e3c, #66bb6a);
+            clip-path: ellipse(140% 65% at 50% 100%);
+            z-index: 5;
+        }
+
+        .hill::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, transparent 55%, rgba(255, 255, 255, 0.25));
+            clip-path: inherit;
+        }
+
+        .message {
+            position: absolute;
+            top: 48%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: clamp(2.5rem, 7vw, 4.5rem);
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 4px 15px rgba(30, 144, 255, 0.7), 0 2px 8px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            z-index: 10;
+            letter-spacing: 1.5px;
+            text-align: center;
+            animation: fadeIn 2s 0.8s forwards;
+        }
+
+        .close-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.15);
+            border: 2px solid rgba(0, 0, 0, 0.2);
+            color: #333;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(8px);
+            transition: all 0.2s;
+        }
+
+        .close-btn:hover {
+            background: rgba(0, 0, 0, 0.25);
+            transform: scale(1.1);
+        }
+
+        @keyframes floatSun {
+            0% {
+                transform: translateX(-50%) translateY(0);
+            }
+
+            100% {
+                transform: translateX(-50%) translateY(-10px);
+            }
+        }
+
+        @keyframes pulseSun {
+            0% {
+                box-shadow: 0 0 50px 15px rgba(255, 215, 0, 0.5), 0 0 100px 40px rgba(255, 255, 240, 0.35), inset -8px -10px 20px rgba(200, 150, 0, 0.4);
+            }
+
+            100% {
+                box-shadow: 0 0 60px 20px rgba(255, 215, 0, 0.6), 0 0 120px 50px rgba(255, 255, 240, 0.4), inset -8px -10px 20px rgba(200, 150, 0, 0.4);
+            }
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <button class="close-btn" onclick="window.portal.closeGreeting()">✕</button>
+    <div class="scene">
+        <div class="cloud c1"></div>
+        <div class="cloud c2"></div>
+        <div class="cloud c3"></div>
+        <div class="sun-wrapper">
+            <div class="sun"></div>
+        </div>
+        <div class="hill"></div>
+        <div class="message" id="msg">Добрый день!</div>
+    </div>
+    <script>
+        window.portal.getUserName().then(name => {
+            if (name) document.getElementById('msg').textContent = `Добрый день, ${name}!`;
+        });
+    </script>
+</body>
+
+</html>

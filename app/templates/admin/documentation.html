@@ -1,0 +1,516 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Документация - Панель управления{% endblock %}
+
+{% block extra_css %}
+<style>
+    .doc-sidebar {
+        position: sticky;
+        top: 20px;
+        max-height: calc(100vh - 100px);
+        overflow-y: auto;
+    }
+
+    .doc-content {
+        /* Контейнер для содержимого секции */
+        line-height: 1.7;
+    }
+
+    .doc-section {
+        display: none;
+        max-width: 1100px;
+    }
+
+    .doc-section.active {
+        display: block;
+    }
+
+    .nav-item {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .nav-item:hover {
+        background-color: #f3f4f6;
+    }
+
+    .nav-item.active {
+        background-color: #dbeafe;
+        border-left: 3px solid #3b82f6;
+        font-weight: 600;
+    }
+
+    .search-highlight {
+        background-color: #fef08a;
+        padding: 2px 4px;
+        border-radius: 2px;
+    }
+
+    /* Заголовки */
+    .doc-section h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 3px solid #3b82f6;
+    }
+
+    .doc-section h2 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .doc-section h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #374151;
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .doc-section h4 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #4b5563;
+        margin-top: 1.25rem;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Параграфы и текст */
+    .doc-section p {
+        margin-bottom: 1rem;
+        color: #374151;
+    }
+
+    /* Списки */
+    .doc-section ul,
+    .doc-section ol {
+        margin-bottom: 1rem;
+        padding-left: 1.5rem;
+    }
+
+    .doc-section ul li,
+    .doc-section ol li {
+        margin-bottom: 0.5rem;
+        color: #374151;
+    }
+
+    .doc-section ul {
+        list-style-type: disc;
+    }
+
+    .doc-section ol {
+        list-style-type: decimal;
+    }
+
+    /* Таблицы */
+    .doc-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1.5rem 0;
+        background-color: white;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+
+    .doc-table thead {
+        background-color: #f9fafb;
+    }
+
+    .doc-table thead th {
+        padding: 0.75rem 1rem;
+        text-align: left;
+        font-weight: 600;
+        color: #111827;
+        border-bottom: 2px solid #e5e7eb;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .doc-table tbody td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #e5e7eb;
+        color: #374151;
+    }
+
+    .doc-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .doc-table tbody tr:hover {
+        background-color: #f9fafb;
+    }
+
+    .doc-table td strong {
+        color: #111827;
+        font-weight: 600;
+    }
+
+    /* Списки внутри таблиц */
+    .doc-table ul,
+    .doc-table ol {
+        margin: 0.5rem 0;
+        padding-left: 1.25rem;
+    }
+
+    .doc-table ul li,
+    .doc-table ol li {
+        margin-bottom: 0.25rem;
+        font-size: 0.875rem;
+    }
+
+    /* Код */
+    .doc-section pre {
+        background-color: #1f2937;
+        color: #f9fafb;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        overflow-x: auto;
+        margin: 1rem 0;
+        font-family: 'Courier New', monospace;
+        font-size: 0.875rem;
+        line-height: 1.5;
+    }
+
+    .doc-section code {
+        background-color: #f3f4f6;
+        color: #dc2626;
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.25rem;
+        font-size: 0.875rem;
+        font-family: 'Courier New', monospace;
+    }
+
+    .doc-section pre code {
+        background-color: transparent;
+        color: #f9fafb;
+        padding: 0;
+    }
+
+    /* Информационные блоки */
+    .doc-note {
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin: 1.5rem 0;
+        background-color: #dbeafe;
+        border-left: 4px solid #3b82f6;
+    }
+
+    .doc-note strong {
+        color: #1e40af;
+    }
+
+    .doc-warning {
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin: 1.5rem 0;
+        background-color: #fef3c7;
+        border-left: 4px solid #f59e0b;
+    }
+
+    .doc-warning strong {
+        color: #92400e;
+    }
+
+    .doc-success {
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin: 1.5rem 0;
+        background-color: #d1fae5;
+        border-left: 4px solid #10b981;
+    }
+
+    .doc-success strong {
+        color: #065f46;
+    }
+
+    .info-box {
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin: 1.5rem 0;
+    }
+
+    .info-box.info {
+        background-color: #dbeafe;
+        border-left: 4px solid #3b82f6;
+    }
+
+    .info-box.warning {
+        background-color: #fef3c7;
+        border-left: 4px solid #f59e0b;
+    }
+
+    .info-box.success {
+        background-color: #d1fae5;
+        border-left: 4px solid #10b981;
+    }
+
+    /* Ссылки */
+    .doc-section a {
+        color: #3b82f6;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .doc-section a:hover {
+        text-decoration: underline;
+        color: #2563eb;
+    }
+
+    /* Разделители */
+    .doc-section hr {
+        border: none;
+        border-top: 1px solid #e5e7eb;
+        margin: 2rem 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex gap-6">
+    <!-- Sidebar -->
+    <div class="w-64 flex-shrink-0">
+        <div class="doc-sidebar bg-white rounded-2xl shadow-sm p-4">
+            <!-- Search -->
+            <div class="mb-4">
+                <input type="text" id="searchInput" placeholder="Поиск..."
+                    class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+            </div>
+
+            <!-- Navigation -->
+            <nav class="space-y-1">
+                <div class="nav-item px-3 py-2 rounded-lg text-sm" data-section="overview">
+                    <i class="fas fa-home w-5"></i> Обзор системы
+                </div>
+
+                <div class="text-xs font-semibold text-gray-500 uppercase px-3 py-2 mt-4">
+                    Пользователи
+                </div>
+                <div class="nav-item px-3 py-2 rounded-lg text-sm" data-section="users-list">
+                    <i class="fas fa-users w-5"></i> Список пользователей
+                </div>
+                <div class="nav-item px-3 py-2 rounded-lg text-sm" data-section="users-create">
+                    <i class="fas fa-user-plus w-5"></i> Создание пользователя
+                </div>
+                <div class="nav-item px-3 py-2 rounded-lg text-sm" data-section="users-roles">
+                    <i class="fas fa-user-shield w-5"></i> Роли и права
+                </div>
+
+                <div class="text-xs font-semibold text-gray-500 uppercase px-3 py-2 mt-4">
+                    Контент
+                </div>
+                <div class="nav-item px-3 py-2 rounded-lg text-sm" data-section="content-news">
+                    <i class="fas fa-newspaper w-5"></i> Новости
+                </div>
+                <div class="nav-item px-3 py-2 rounded-lg text-sm" data-section="content-vacancies">
+                    <i class="fas fa-briefcase w-5"></i> Вакансии
+                </div>
+                <div class="nav-item px-3 py-2 rounded-lg text-sm" data-section="content-surveys">
+                    <i class="fas fa-poll w-5"></i> Опросы
+                </div>
+                <div class="nav-item px-3 py-2 rounded-lg text-sm" data-section="content-tests">
+                    <i class="fas fa-clipboard-check w-5"></i> Тесты
+                </div>
+
+                <div class="text-xs font-semibold text-gray-500 uppercase px-3 py-2 mt-4">
+                    Заявки
+                </div>
+                <div class="nav-item px-3 py-2 rounded-lg text-sm" data-section="requests-passes">
+                    <i class="fas fa-id-card w-5"></i> Пропуска
+                </div>
+                <div class="nav-item px-3 py-2 rounded-lg text-sm" data-section="requests-orders">
+                    <i class="fas fa-shopping-cart w-5"></i> Заказы
+                </div>
+                <div class="nav-item px-3 py-2 rounded-lg text-sm" data-section="requests-vacations">
+                    <i class="fas fa-umbrella-beach w-5"></i> Отпуска
+                </div>
+
+                <div class="text-xs font-semibold text-gray-500 uppercase px-3 py-2 mt-4">
+                    Настройки
+                </div>
+                <div class="nav-item px-3 py-2 rounded-lg text-sm" data-section="settings-general">
+                    <i class="fas fa-cog w-5"></i> Общие настройки
+                </div>
+                <div class="nav-item px-3 py-2 rounded-lg text-sm" data-section="settings-menu">
+                    <i class="fas fa-bars w-5"></i> Меню
+                </div>
+                <div class="nav-item px-3 py-2 rounded-lg text-sm" data-section="settings-vacations">
+                    <i class="fas fa-calendar-alt w-5"></i> Отпуска
+                </div>
+
+                <div class="text-xs font-semibold text-gray-500 uppercase px-3 py-2 mt-4">
+                    Интеграции
+                </div>
+                <div class="nav-item px-3 py-2 rounded-lg text-sm" data-section="integration-ldap">
+                    <i class="fas fa-server w-5"></i> LDAP / AD
+                </div>
+                <div class="nav-item px-3 py-2 rounded-lg text-sm" data-section="integration-smtp">
+                    <i class="fas fa-envelope w-5"></i> SMTP / Email
+                </div>
+                <div class="nav-item px-3 py-2 rounded-lg text-sm" data-section="integration-logs">
+                    <i class="fas fa-history w-5"></i> Логи и мониторинг
+                </div>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div class="flex-1">
+        <div class="bg-white rounded-2xl shadow-sm p-8">
+            <div id="searchResults" class="hidden mb-6">
+                <h2 class="text-xl font-bold mb-4">Результаты поиска</h2>
+                <div id="searchResultsList"></div>
+            </div>
+
+            {% include 'admin/documentation/overview.html' %}
+            {% include 'admin/documentation/users-list.html' %}
+            {% include 'admin/documentation/users-create.html' %}
+            {% include 'admin/documentation/users-roles.html' %}
+            {% include 'admin/documentation/content-news.html' %}
+            {% include 'admin/documentation/content-vacancies.html' %}
+            {% include 'admin/documentation/content-surveys.html' %}
+            {% include 'admin/documentation/content-tests.html' %}
+            {% include 'admin/documentation/requests-passes.html' %}
+            {% include 'admin/documentation/requests-orders.html' %}
+            {% include 'admin/documentation/requests-vacations.html' %}
+            {% include 'admin/documentation/settings-general.html' %}
+            {% include 'admin/documentation/settings-menu.html' %}
+            {% include 'admin/documentation/settings-vacations.html' %}
+            {% include 'admin/documentation/integration-ldap.html' %}
+            {% include 'admin/documentation/integration-smtp.html' %}
+            {% include 'admin/documentation/integration-logs.html' %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const navItems = document.querySelectorAll('.nav-item');
+        const sections = document.querySelectorAll('.doc-section');
+        const searchInput = document.getElementById('searchInput');
+        const searchResults = document.getElementById('searchResults');
+        const searchResultsList = document.getElementById('searchResultsList');
+
+        // Get initial section from URL or default to overview
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialSection = urlParams.get('section') || 'overview';
+
+        // Show initial section
+        showSection(initialSection);
+
+        // Navigation
+        navItems.forEach(item => {
+            item.addEventListener('click', function () {
+                const section = this.dataset.section;
+                showSection(section);
+                updateURL(section);
+                searchInput.value = '';
+                searchResults.classList.add('hidden');
+            });
+        });
+
+        function showSection(sectionId) {
+            // Hide all sections
+            sections.forEach(s => s.classList.remove('active'));
+            navItems.forEach(n => n.classList.remove('active'));
+
+            // Show selected section
+            const section = document.querySelector(`[data-section-id="${sectionId}"]`);
+            const navItem = document.querySelector(`[data-section="${sectionId}"]`);
+
+            if (section) section.classList.add('active');
+            if (navItem) navItem.classList.add('active');
+        }
+
+        function updateURL(section) {
+            const url = new URL(window.location);
+            url.searchParams.set('section', section);
+            window.history.pushState({}, '', url);
+        }
+
+        // Search functionality
+        let searchTimeout;
+        searchInput.addEventListener('input', function () {
+            clearTimeout(searchTimeout);
+            const query = this.value.trim().toLowerCase();
+
+            if (query.length < 2) {
+                searchResults.classList.add('hidden');
+                return;
+            }
+
+            searchTimeout = setTimeout(() => {
+                performSearch(query);
+            }, 300);
+        });
+
+        function performSearch(query) {
+            const results = [];
+
+            sections.forEach(section => {
+                const sectionId = section.dataset.sectionId;
+                const sectionTitle = section.querySelector('h1')?.textContent || '';
+                const content = section.textContent.toLowerCase();
+
+                if (content.includes(query)) {
+                    // Find matching paragraphs
+                    const paragraphs = section.querySelectorAll('p, li, h2, h3');
+                    paragraphs.forEach(p => {
+                        const text = p.textContent.toLowerCase();
+                        if (text.includes(query)) {
+                            results.push({
+                                section: sectionId,
+                                title: sectionTitle,
+                                text: p.textContent.substring(0, 200) + '...',
+                                element: p
+                            });
+                        }
+                    });
+                }
+            });
+
+            displaySearchResults(results, query);
+        }
+
+        function displaySearchResults(results, query) {
+            if (results.length === 0) {
+                searchResultsList.innerHTML = '<p class="text-gray-500">Ничего не найдено</p>';
+                searchResults.classList.remove('hidden');
+                return;
+            }
+
+            const html = results.slice(0, 10).map(result => {
+                const highlightedText = highlightQuery(result.text, query);
+                return `
+                <div class="mb-4 p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50" 
+                     onclick="showSection('${result.section}')">
+                    <div class="font-semibold text-blue-600 mb-1">${result.title}</div>
+                    <div class="text-sm text-gray-600">${highlightedText}</div>
+                </div>
+            `;
+            }).join('');
+
+            searchResultsList.innerHTML = html;
+            searchResults.classList.remove('hidden');
+
+            // Hide all sections when showing search results
+            sections.forEach(s => s.classList.remove('active'));
+        }
+
+        function highlightQuery(text, query) {
+            const regex = new RegExp(`(${query})`, 'gi');
+            return text.replace(regex, '<span class="search-highlight">$1</span>');
+        }
+    });
+</script>
+{% endblock %}

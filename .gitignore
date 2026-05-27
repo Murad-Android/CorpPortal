@@ -1,0 +1,77 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Database
+instance/*.db
+*.db
+
+# Release builds
+release_build/
+release_build.zip
+release_build_2.0.zip
+
+# Uploads (user content)
+app/static/uploads/news/content/*
+app/static/uploads/referrals/*
+app/static/uploads/services/*
+app/static/messenger/avatars/*
+app/static/messenger/files/*
+app/static/messenger/voice/*
+app/static/staff_photo/*
+Messanger/uploads/*
+Messanger/static/uploads/*
+
+# Keep directories
+!app/static/uploads/news/content/.gitkeep
+!app/static/uploads/referrals/.gitkeep
+!app/static/uploads/services/.gitkeep
+!app/static/messenger/avatars/.gitkeep
+!app/static/messenger/files/.gitkeep
+!app/static/messenger/voice/.gitkeep
+!app/static/staff_photo/.gitkeep
+!Messanger/uploads/.gitkeep
+!Messanger/static/uploads/.gitkeep
+
+# Tailwind CLI (binary, download separately)
+tailwindcss.exe
+tailwindcss
+
+# Logs
+*.log
+
+# Test artifacts
+test-results.xml
+coverage.xml
+htmlcov/
+.pytest_cache/
+.coverage
+
+# Certificates (sensitive)
+Messanger/cert/private_key.pem
+
+# External projects (separate repos)
+BugTracker/
+ControlPanel2/
+
+# Node modules
+node_modules/
+
+# Stickers user content
+Messanger/stickers/*/
+
+# OS files
+Thumbs.db
+.DS_Store

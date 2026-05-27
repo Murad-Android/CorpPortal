@@ -1,0 +1,68 @@
+{% extends "admin/base.html" %}
+{% block title %}Настройки баг-трекера{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Баг-трекер: управление доступом</h1>
+        <a href="{{ url_for('bugtracker.index') }}" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+            <i class="fa-solid fa-external-link mr-1"></i> Открыть баг-трекер
+        </a>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100">
+            <p class="text-sm text-gray-500">Администраторы имеют доступ всегда. Здесь можно открыть доступ остальным
+                пользователям.</p>
+        </div>
+        <table class="w-full">
+            <thead>
+                <tr class="bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <th class="px-4 py-3">Пользователь</th>
+                    <th class="px-4 py-3">Должность</th>
+                    <th class="px-4 py-3">Доступ</th>
+                    <th class="px-4 py-3">Действие</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                {% if not (user.role and user.role.name == 'admin') %}
+                <tr class="border-t border-gray-100">
+                    <td class="px-4 py-3">
+                        <div class="font-medium">{{ user.full_name }}</div>
+                        <div class="text-xs text-gray-400">{{ user.username }}</div>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-600">{{ user.position or '-' }}</td>
+                    <td class="px-4 py-3">
+                        {% if user.id in access_user_ids %}
+                        <span
+                            class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">Открыт</span>
+                        {% else %}
+                        <span
+                            class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">Закрыт</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3">
+                        <form method="POST" action="{{ url_for('admin.bugtracker_toggle_access') }}" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="user_id" value="{{ user.id }}">
+                            {% if user.id in access_user_ids %}
+                            <button type="submit"
+                                class="px-3 py-1 text-xs font-medium bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition">
+                                <i class="fa-solid fa-lock mr-1"></i> Закрыть
+                            </button>
+                            {% else %}
+                            <button type="submit"
+                                class="px-3 py-1 text-xs font-medium bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition">
+                                <i class="fa-solid fa-lock-open mr-1"></i> Открыть
+                            </button>
+                            {% endif %}
+                        </form>
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Управление ролями{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Управление ролями</h1>
+        <p class="text-gray-600">Настройка прав доступа для ролей пользователей</p>
+    </div>
+    <a href="{{ url_for('admin.role_create') }}"
+        class="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 flex items-center gap-2">
+        <i class="fas fa-plus"></i> Создать роль
+    </a>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for role in roles %}
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+        <div class="flex items-start justify-between mb-4">
+            <div>
+                <h3 class="font-semibold text-gray-900 text-lg">{{ role.display_name or role.name }}</h3>
+                <p class="text-sm text-gray-500">{{ role.name }}</p>
+            </div>
+            {% if role.is_system %}
+            <span class="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">Системная</span>
+            {% endif %}
+        </div>
+
+        {% if role.description %}
+        <p class="text-sm text-gray-600 mb-4">{{ role.description }}</p>
+        {% endif %}
+
+        <!-- Permissions preview -->
+        <div class="mb-4">
+            {% set perms = role.get_permissions() %}
+            {% if perms.get('all') %}
+            <span class="inline-block px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full mr-1 mb-1">
+                <i class="fas fa-crown mr-1"></i> Полный доступ
+            </span>
+            {% else %}
+            {% set active_perms = role.get_permissions_list() %}
+            {% if active_perms %}
+            <div class="flex flex-wrap gap-1">
+                {% for perm in active_perms[:5] %}
+                <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
+                    {{ available_permissions.get(perm, {}).get('name', perm) }}
+                </span>
+                {% endfor %}
+                {% if active_perms|length > 5 %}
+                <span class="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                    +{{ active_perms|length - 5 }}
+                </span>
+                {% endif %}
+            </div>
+            {% else %}
+            <span class="text-sm text-gray-400">Нет специальных прав</span>
+            {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- Users count -->
+        <div class="text-sm text-gray-500 mb-4">
+            <i class="fas fa-users mr-1"></i> {{ role.users.count() }} пользователей
+        </div>
+
+        <!-- Actions -->
+        <div class="flex gap-2">
+            <a href="{{ url_for('admin.role_edit', id=role.id) }}"
+                class="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-center text-sm">
+                <i class="fas fa-edit mr-1"></i> Редактировать
+            </a>
+            {% if not role.is_system and role.users.count() == 0 %}
+            <form method="POST" action="{{ url_for('admin.role_delete', id=role.id) }}"
+                onsubmit="return confirm('Удалить роль {{ role.display_name }}?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 text-sm">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

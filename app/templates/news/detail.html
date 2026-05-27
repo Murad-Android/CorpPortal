@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}{{ article.title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <a href="{{ url_for('news.index') }}" class="text-blue-500 hover:text-blue-600 mb-4 inline-block">
+        <i class="fas fa-arrow-left mr-2"></i>Назад к новостям
+    </a>
+
+    <article class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        {% if article.image %}
+        <div class="w-full h-96">
+            <img src="{{ url_for('static', filename='uploads/news/' + article.image) }}" alt="{{ article.title }}"
+                class="w-full h-full object-cover">
+        </div>
+        {% endif %}
+
+        <div class="p-6 md:p-8">
+            <div class="flex items-center space-x-2 mb-4">
+                {% if article.is_pinned %}
+                <span class="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                    <i class="fas fa-thumbtack mr-1"></i>Закреплено
+                </span>
+                {% endif %}
+                <span class="text-sm text-gray-500">{{ article.created_at.strftime('%d %B %Y') }}</span>
+                {% if article.author %}
+                <span class="text-sm text-gray-500">• {{ article.author.username }}</span>
+                {% endif %}
+            </div>
+
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6">{{ article.title }}</h1>
+
+            {% if article.short_description %}
+            <p class="text-lg text-gray-600 mb-6 pb-6 border-b">{{ article.short_description }}</p>
+            {% endif %}
+
+            <div class="prose max-w-none text-gray-700 leading-relaxed">
+                {{ article.content|markdown|safe }}
+            </div>
+        </div>
+    </article>
+
+    <!-- Комментарии -->
+    {% if article.comments_enabled %}
+    <div class="mt-8 bg-white rounded-2xl shadow-sm p-6 md:p-8" id="comments">
+        <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+            <i class="fas fa-comments text-blue-500"></i>
+            Комментарии
+            <span class="text-sm font-normal text-gray-500">({{ article.get_comments_count() }})</span>
+        </h2>
+
+        <!-- Форма добавления комментария -->
+        <form method="POST" action="{{ url_for('news.add_comment', id=article.id) }}" class="mb-8">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="flex gap-3">
+                <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                    <img src="{{ url_for('static', filename=current_user.photo|user_photo) }}" alt=""
+                        class="w-full h-full object-cover">
+                </div>
+                <div class="flex-1">
+                    <textarea name="content" rows="3" required
+                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        placeholder="Напишите комментарий..."></textarea>
+                    <div class="flex justify-end mt-2">
+                        <button type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-sm">
+                            <i class="fas fa-paper-plane mr-1"></i> Отправить
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <!-- Список комментариев -->
+        <div class="space-y-6">
+            {% for comment in article.get_root_comments() %}
+            {% include "news/_comment.html" %}
+            {% else %}
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-comment-slash text-3xl mb-2"></i>
+                <p>Пока нет комментариев. Будьте первым!</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="mt-8 bg-gray-50 rounded-2xl p-6 text-center text-gray-500">
+        <i class="fas fa-comment-slash text-2xl mb-2"></i>
+        <p>Комментарии к этой новости отключены</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Модальное окно для ответа -->
+<div id="replyModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Ответить на комментарий</h3>
+        <form id="replyForm" method="POST" action="{{ url_for('news.add_comment', id=article.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="parent_id" id="replyParentId" value="">
+            <div class="mb-4">
+                <div id="replyQuote"
+                    class="p-3 bg-gray-50 rounded-lg text-sm text-gray-600 mb-3 border-l-4 border-blue-500"></div>
+                <textarea name="content" rows="3" required
+                    class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    placeholder="Ваш ответ..."></textarea>
+            </div>
+            <div class="flex gap-3">
+                <button type="submit"
+                    class="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium">
+                    Ответить
+                </button>
+                <button type="button" onclick="hideReplyModal()"
+                    class="px-4 py-3 border border-gray-200 rounded-xl hover:bg-gray-50">
+                    Отмена
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Модальное окно для редактирования -->
+<div id="editModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Редактировать комментарий</h3>
+        <form id="editForm" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-4">
+                <textarea name="content" id="editContent" rows="4" required
+                    class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"></textarea>
+            </div>
+            <div class="flex gap-3">
+                <button type="submit"
+                    class="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium">
+                    Сохранить
+                </button>
+                <button type="button" onclick="hideEditModal()"
+                    class="px-4 py-3 border border-gray-200 rounded-xl hover:bg-gray-50">
+                    Отмена
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function showReplyModal(commentId, authorName, content) {
+        document.getElementById('replyParentId').value = commentId;
+        document.getElementById('replyQuote').innerHTML = '<strong>' + authorName + ':</strong> ' + content.substring(0, 100) + (content.length > 100 ? '...' : '');
+        document.getElementById('replyModal').classList.remove('hidden');
+        document.getElementById('replyModal').classList.add('flex');
+    }
+
+    function hideReplyModal() {
+        document.getElementById('replyModal').classList.add('hidden');
+        document.getElementById('replyModal').classList.remove('flex');
+    }
+
+    function showEditModal(commentId, content) {
+        document.getElementById('editForm').action = '/news/comments/' + commentId + '/edit';
+        document.getElementById('editContent').value = content;
+        document.getElementById('editModal').classList.remove('hidden');
+        document.getElementById('editModal').classList.add('flex');
+    }
+
+    function hideEditModal() {
+        document.getElementById('editModal').classList.add('hidden');
+        document.getElementById('editModal').classList.remove('flex');
+    }
+
+    // Закрытие модалок по клику на фон
+    document.getElementById('replyModal')?.addEventListener('click', function (e) {
+        if (e.target === this) hideReplyModal();
+    });
+    document.getElementById('editModal')?.addEventListener('click', function (e) {
+        if (e.target === this) hideEditModal();
+    });
+</script>
+{% endblock %}

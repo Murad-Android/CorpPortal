@@ -1,0 +1,107 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Центр безопасности | Админ-панель{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('admin.index') }}" class="inline-flex items-center text-blue-500 hover:text-blue-600 mb-4">
+        <i class="fas fa-arrow-left mr-2"></i>Назад
+    </a>
+</div>
+
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">Центр безопасности</h1>
+        <p class="text-gray-600">Управление статьями по безопасности</p>
+    </div>
+    <a href="{{ url_for('admin.security_create') }}"
+        class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors">
+        <i class="fas fa-plus mr-2"></i>Добавить
+    </a>
+</div>
+
+<div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50 border-b border-gray-100">
+                <tr>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Статья</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">
+                        Приоритет</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase hidden md:table-cell">
+                        Дата</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Статус</th>
+                    <th class="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Действия</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for article in articles.items %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-lg flex items-center justify-center
+                                {% if article.priority == 'critical' %}bg-red-100 text-red-600
+                                {% elif article.priority == 'warning' %}bg-yellow-100 text-yellow-600
+                                {% elif article.priority == 'success' %}bg-green-100 text-green-600
+                                {% else %}bg-blue-100 text-blue-600{% endif %}">
+                                <i class="fas fa-{{ article.icon or 'shield-alt' }}"></i>
+                            </div>
+                            <span class="font-medium text-gray-800">{{ article.title }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 hidden sm:table-cell">
+                        {% if article.priority == 'critical' %}
+                        <span
+                            class="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">Критический</span>
+                        {% elif article.priority == 'warning' %}
+                        <span
+                            class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">Важный</span>
+                        {% elif article.priority == 'success' %}
+                        <span
+                            class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">Успех</span>
+                        {% else %}
+                        <span
+                            class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">Информация</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-gray-500 text-sm hidden md:table-cell">{{
+                        article.created_at.strftime('%d.%m.%Y') }}</td>
+                    <td class="px-6 py-4">
+                        {% if article.is_published %}
+                        <span
+                            class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">Опубликовано</span>
+                        {% else %}
+                        <span
+                            class="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">Черновик</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <div class="flex items-center justify-end space-x-2">
+                            <a href="{{ url_for('admin.security_edit', id=article.id) }}"
+                                class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-200">
+                                <i class="fas fa-edit text-sm"></i>
+                            </a>
+                            <form method="POST" action="{{ url_for('admin.security_delete', id=article.id) }}"
+                                onsubmit="return confirm('Удалить?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit"
+                                    class="w-8 h-8 bg-red-100 text-red-600 rounded-lg flex items-center justify-center hover:bg-red-200">
+                                    <i class="fas fa-trash text-sm"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                        <i class="fas fa-shield-alt text-4xl mb-3 text-gray-300"></i>
+                        <p>Статьи не найдены</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,106 @@
+<div class="doc-section" data-section-id="integration-ldap">
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">Интеграция с LDAP/Active Directory</h1>
+
+    <div class="doc-content">
+        <h3>Настройка LDAP</h3>
+        <p>Система поддерживает аутентификацию через LDAP/Active Directory для централизованного управления
+            пользователями.</p>
+
+        <h3>Доступ к настройкам</h3>
+        <p>Для настройки LDAP перейдите в <strong>Система → Настройки → LDAP</strong></p>
+
+        <h3>Параметры подключения</h3>
+        <table class="doc-table">
+            <thead>
+                <tr>
+                    <th>Параметр</th>
+                    <th>Описание</th>
+                    <th>Пример</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Сервер LDAP</strong></td>
+                    <td>Адрес LDAP-сервера</td>
+                    <td>ldap://dc.company.local</td>
+                </tr>
+                <tr>
+                    <td><strong>Порт</strong></td>
+                    <td>Порт подключения</td>
+                    <td>389 (LDAP) или 636 (LDAPS)</td>
+                </tr>
+                <tr>
+                    <td><strong>Base DN</strong></td>
+                    <td>Базовый DN для поиска</td>
+                    <td>DC=company,DC=local</td>
+                </tr>
+                <tr>
+                    <td><strong>Bind DN</strong></td>
+                    <td>DN учетной записи для подключения</td>
+                    <td>CN=admin,DC=company,DC=local</td>
+                </tr>
+                <tr>
+                    <td><strong>Пароль</strong></td>
+                    <td>Пароль учетной записи</td>
+                    <td>••••••••</td>
+                </tr>
+                <tr>
+                    <td><strong>Фильтр пользователей</strong></td>
+                    <td>LDAP-фильтр для поиска пользователей</td>
+                    <td>(objectClass=person)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Настройка атрибутов</h3>
+        <p>Сопоставление атрибутов LDAP с полями системы:</p>
+        <ul>
+            <li><strong>Логин</strong> → sAMAccountName или uid</li>
+            <li><strong>Email</strong> → mail</li>
+            <li><strong>Имя</strong> → givenName</li>
+            <li><strong>Фамилия</strong> → sn</li>
+            <li><strong>Отображаемое имя</strong> → displayName</li>
+        </ul>
+
+        <h3>Включение LDAP-аутентификации</h3>
+        <ol>
+            <li>Заполните все параметры подключения</li>
+            <li>Нажмите <strong>"Проверить подключение"</strong> для тестирования</li>
+            <li>Установите галочку <strong>"Включить LDAP"</strong></li>
+            <li>Сохраните настройки</li>
+        </ol>
+
+        <h3>Синхронизация пользователей</h3>
+        <p>После настройки LDAP:</p>
+        <ul>
+            <li>Пользователи могут входить с учетными данными домена</li>
+            <li>При первом входе автоматически создается учетная запись в системе</li>
+            <li>Данные пользователя синхронизируются с LDAP при каждом входе</li>
+        </ul>
+
+        <div class="doc-note">
+            <strong>Примечание:</strong> Для работы LDAP через SSL (LDAPS) используйте порт 636 и убедитесь, что
+            сертификат сервера доверенный.
+        </div>
+
+        <h3>Группы LDAP</h3>
+        <p>Можно настроить автоматическое назначение ролей на основе групп LDAP:</p>
+        <ol>
+            <li>Укажите DN группы в настройках роли</li>
+            <li>Пользователи из этой группы автоматически получат соответствующую роль</li>
+        </ol>
+
+        <div class="doc-warning">
+            <strong>Внимание:</strong> При включении LDAP локальные пароли пользователей игнорируются. Аутентификация
+            происходит только через LDAP-сервер.
+        </div>
+
+        <h3>Отключение LDAP</h3>
+        <p>Для возврата к локальной аутентификации:</p>
+        <ol>
+            <li>Снимите галочку <strong>"Включить LDAP"</strong></li>
+            <li>Сохраните настройки</li>
+            <li>Пользователи снова смогут входить с локальными паролями</li>
+        </ol>
+    </div>
+</div>

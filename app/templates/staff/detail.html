@@ -1,0 +1,507 @@
+{% extends "base.html" %}
+
+{% block title %}{{ employee.full_name }} | Корпоративный портал{% endblock %}
+
+{% block extra_css %}
+<style>
+    .thanks-heart {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(238, 90, 90, 0.4);
+        transition: all 0.3s ease;
+        z-index: 10;
+    }
+
+    .thanks-heart:hover {
+        transform: scale(1.15);
+        box-shadow: 0 6px 20px rgba(238, 90, 90, 0.5);
+    }
+
+    .thanks-heart i {
+        color: white;
+        font-size: 16px;
+    }
+
+    .thanks-count {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: white;
+        color: #ee5a5a;
+        font-size: 10px;
+        font-weight: bold;
+        min-width: 18px;
+        height: 18px;
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+
+    .photo-container {
+        position: relative;
+        display: inline-block;
+    }
+
+    .thanks-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .thanks-modal.active {
+        display: flex;
+    }
+
+    .thanks-modal-content {
+        background: white;
+        border-radius: 20px;
+        padding: 24px;
+        max-width: 400px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+
+    .thanks-item {
+        padding: 12px;
+        background: #fef2f2;
+        border-radius: 12px;
+        margin-bottom: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 max-w-4xl">
+    <!-- Back button -->
+    <a href="{{ url_for('staff.index') }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 mb-6">
+        <i class="fas fa-arrow-left mr-2"></i>Назад к списку
+    </a>
+
+    <!-- Profile Card -->
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-blue-500 to-blue-600 p-8 text-white">
+            <div class="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6">
+                <div class="photo-container">
+                    <img src="{{ url_for('static', filename=employee.photo|user_photo) }}"
+                        alt="{{ employee.full_name }}"
+                        class="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg">
+                    {% if employee.id != current_user.id %}
+                    <div class="thanks-heart" onclick="openThanksModal()" title="Сказать спасибо">
+                        <i class="fas fa-heart"></i>
+                        {% if thanks_count > 0 %}
+                        <span class="thanks-count">{{ thanks_count if thanks_count < 100 else '99+' }}</span>
+                                {% endif %}
+                    </div>
+                    {% else %}
+                    {% if thanks_count > 0 %}
+                    <div class="thanks-heart" onclick="showThanksHistory()" title="Ваши благодарности"
+                        style="background: linear-gradient(135deg, #f472b6, #ec4899);">
+                        <i class="fas fa-heart"></i>
+                        <span class="thanks-count">{{ thanks_count if thanks_count < 100 else '99+' }}</span>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+                <div class="text-center md:text-left">
+                    <h1 class="text-3xl font-bold">{{ employee.full_name }}</h1>
+                    <p class="text-blue-100 text-lg mt-1">{{ employee.position }}</p>
+                    {% if employee.department %}
+                    <span class="inline-block mt-3 px-4 py-1 bg-white/20 rounded-full text-sm">
+                        {{ employee.department }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Fields -->
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% if card_fields %}
+            {% for field in card_fields %}
+            {% if field.section == 'contact' %}
+            {% set value = employee_data.get(field.field_name) %}
+            {% if value %}
+            {% if field.is_link and field.link_prefix %}
+            <a href="{{ field.link_prefix }}{{ value }}"
+                class="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                {% else %}
+                <div class="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl">
+                    {% endif %}
+                    <div class="w-12 h-12 bg-{{ field.icon_color }}-100 rounded-xl flex items-center justify-center">
+                        {% if field.icon_type == 'fontawesome' %}
+                        <i class="fas {{ field.icon_value }} text-{{ field.icon_color }}-500 text-xl"></i>
+                        {% elif field.icon_type == 'image' %}
+                        <img src="{{ url_for('static', filename=field.icon_value) }}" class="w-6 h-6 object-contain">
+                        {% endif %}
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">{{ field.display_name }}</p>
+                        <p class="font-medium text-gray-800">{{ value }}</p>
+                    </div>
+                    {% if field.is_link and field.link_prefix %}
+            </a>
+            {% else %}
+        </div>
+        {% endif %}
+        {% endif %}
+        {% endif %}
+        {% endfor %}
+        {% else %}
+        {% if employee.email %}
+        <a href="mailto:{{ employee.email }}"
+            class="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <i class="fas fa-envelope text-blue-500 text-xl"></i>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500">Email</p>
+                <p class="font-medium text-gray-800">{{ employee.email }}</p>
+            </div>
+        </a>
+        {% endif %}
+        {% if employee.phone %}
+        <a href="tel:{{ employee.phone }}"
+            class="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <i class="fas fa-phone text-green-500 text-xl"></i>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500">Телефон</p>
+                <p class="font-medium text-gray-800">{{ employee.phone }}</p>
+            </div>
+        </a>
+        {% endif %}
+        {% if employee.internal_phone %}
+        <div class="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl">
+            <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                <i class="fas fa-phone-office text-purple-500 text-xl"></i>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500">Внутренний</p>
+                <p class="font-medium text-gray-800">{{ employee.internal_phone }}</p>
+            </div>
+        </div>
+        {% endif %}
+        {% if employee.location %}
+        <div class="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl">
+            <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                <i class="fas fa-map-marker-alt text-amber-500 text-xl"></i>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500">Местоположение</p>
+                <p class="font-medium text-gray-800">{{ employee.location }}</p>
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+
+    <!-- Additional Info -->
+    <div class="p-6 border-t border-gray-100">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Дополнительная информация</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% if employee.manager %}
+            <a href="{{ url_for('staff.detail', id=employee.manager.id) }}"
+                class="flex items-center space-x-3 p-3 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors">
+                <img src="{{ url_for('static', filename=employee.manager.photo|user_photo) }}"
+                    class="w-10 h-10 rounded-full object-cover">
+                <div>
+                    <p class="text-sm text-gray-500">Руководитель</p>
+                    <p class="font-medium text-blue-600">{{ employee.manager.full_name }}</p>
+                    {% if employee.manager.position %}
+                    <p class="text-xs text-gray-500">{{ employee.manager.position }}</p>
+                    {% endif %}
+                </div>
+                <i class="fas fa-chevron-right text-gray-400 ml-auto"></i>
+            </a>
+            {% endif %}
+
+            {% if card_fields %}
+            {% for field in card_fields %}
+            {% if field.section == 'info' %}
+            {% set value = employee_data.get(field.field_name) %}
+            {% if value %}
+            <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-xl">
+                <div class="w-10 h-10 bg-{{ field.icon_color }}-100 rounded-lg flex items-center justify-center">
+                    {% if field.icon_type == 'fontawesome' %}
+                    <i class="fas {{ field.icon_value }} text-{{ field.icon_color }}-500"></i>
+                    {% elif field.icon_type == 'image' %}
+                    <img src="{{ url_for('static', filename=field.icon_value) }}" class="w-5 h-5 object-contain">
+                    {% endif %}
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">{{ field.display_name }}</p>
+                    <p class="font-medium">{{ value }}</p>
+                </div>
+            </div>
+            {% endif %}
+            {% endif %}
+            {% endfor %}
+            {% else %}
+            {% if employee.birthday %}
+            <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-xl">
+                <div class="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-birthday-cake text-pink-500"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">День рождения</p>
+                    <p class="font-medium">{{ employee_data.birthday }}</p>
+                </div>
+            </div>
+            {% endif %}
+            {% if employee.hire_date %}
+            <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-xl">
+                <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-calendar-check text-green-500"></i>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Дата приёма</p>
+                    <p class="font-medium">{{ employee.hire_date.strftime('%d.%m.%Y') }}</p>
+                </div>
+            </div>
+            {% endif %}
+            {% endif %}
+        </div>
+
+        {% if employee.subordinates %}
+        <div class="mt-6">
+            <h3 class="text-md font-semibold text-gray-700 mb-3">Подчинённые ({{ employee.subordinates|length }})</h3>
+            <div class="flex flex-wrap gap-2">
+                {% for sub in employee.subordinates[:10] %}
+                <a href="{{ url_for('staff.detail', id=sub.id) }}"
+                    class="flex items-center space-x-2 px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                    <img src="{{ url_for('static', filename=sub.photo|user_photo) }}"
+                        class="w-6 h-6 rounded-full object-cover">
+                    <span class="text-sm font-medium text-gray-700">{{ sub.short_name }}</span>
+                </a>
+                {% endfor %}
+                {% if employee.subordinates|length > 10 %}
+                <span class="px-3 py-2 text-sm text-gray-500">и ещё {{ employee.subordinates|length - 10 }}...</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Thanks Section -->
+    {% if thanks_list %}
+    <div class="p-6 border-t border-gray-100">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-heart text-red-400 mr-2"></i>Благодарности ({{ thanks_count }})
+        </h2>
+        <div class="space-y-3">
+            {% for t in thanks_list %}
+            <div class="flex items-start space-x-3 p-3 bg-red-50 rounded-xl">
+                <img src="{{ url_for('static', filename=t.from_user.photo|user_photo) }}"
+                    class="w-10 h-10 rounded-full object-cover">
+                <div class="flex-1">
+                    <p class="font-medium text-gray-800">{{ t.from_user.short_name }}</p>
+                    <p class="text-gray-600 text-sm">{{ t.message }}</p>
+                    <p class="text-gray-400 text-xs mt-1">{{ t.created_at.strftime('%d.%m.%Y') }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Actions -->
+    <div class="p-6 border-t border-gray-100 bg-gray-50 flex flex-wrap gap-3">
+        {% if employee.id != current_user.id %}
+        <a href="{{ url_for('messenger.chat', user_id=employee.id) }}"
+            class="inline-flex items-center px-6 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors">
+            <i class="fas fa-comment mr-2"></i>Написать сообщение
+        </a>
+        {% endif %}
+        {% if can_edit %}
+        <a href="{{ url_for('staff.edit', id=employee.id) }}"
+            class="inline-flex items-center px-6 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors">
+            <i class="fas fa-edit mr-2"></i>Редактировать профиль
+        </a>
+        {% endif %}
+    </div>
+</div>
+</div>
+
+<!-- Thanks Modal -->
+<div class="thanks-modal" id="thanksModal" onclick="closeThanksModal(event)">
+    <div class="thanks-modal-content" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-gray-800">
+                <i class="fas fa-heart text-red-400 mr-2"></i>Сказать спасибо
+            </h3>
+            <button onclick="closeThanksModal()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <p class="text-gray-600 mb-4">Напишите благодарность для {{ employee.short_name }}</p>
+        <textarea id="thanksMessage" rows="4" maxlength="500"
+            class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-red-400 outline-none resize-none"
+            placeholder="За что вы благодарны этому сотруднику?"></textarea>
+        <p class="text-right text-sm text-gray-400 mt-1"><span id="charCount">0</span>/500</p>
+        <button onclick="sendThanks()" id="sendThanksBtn"
+            class="w-full mt-4 px-6 py-3 bg-gradient-to-r from-red-400 to-pink-500 text-white rounded-xl hover:from-red-500 hover:to-pink-600 transition-all">
+            <i class="fas fa-heart mr-2"></i>Отправить благодарность
+        </button>
+    </div>
+</div>
+
+<!-- Thanks History Modal -->
+<div class="thanks-modal" id="thanksHistoryModal" onclick="closeThanksHistoryModal(event)">
+    <div class="thanks-modal-content" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-gray-800">
+                <i class="fas fa-heart text-red-400 mr-2"></i>Ваши благодарности
+            </h3>
+            <button onclick="closeThanksHistoryModal()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div id="thanksHistoryList" class="space-y-2">
+            <!-- Загружается динамически -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const employeeId = {{ employee.id }};
+    const csrfToken = '{{ csrf_token() }}';
+
+    // Модальное окно благодарности
+    function openThanksModal() {
+        document.getElementById('thanksModal').classList.add('active');
+        document.getElementById('thanksMessage').focus();
+    }
+
+    function closeThanksModal(e) {
+        if (e && e.target !== e.currentTarget) return;
+        document.getElementById('thanksModal').classList.remove('active');
+        document.getElementById('thanksMessage').value = '';
+        document.getElementById('charCount').textContent = '0';
+    }
+
+    // Счётчик символов
+    document.getElementById('thanksMessage')?.addEventListener('input', function () {
+        document.getElementById('charCount').textContent = this.value.length;
+    });
+
+    // Отправка благодарности
+    async function sendThanks() {
+        const message = document.getElementById('thanksMessage').value.trim();
+        if (!message) {
+            alert('Введите текст благодарности');
+            return;
+        }
+
+        const btn = document.getElementById('sendThanksBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Отправка...';
+
+        try {
+            const response = await fetch(`/staff/${employeeId}/thanks`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ message })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                closeThanksModal();
+                // Обновляем счётчик
+                const countEl = document.querySelector('.thanks-count');
+                if (countEl) {
+                    countEl.textContent = data.thanks_count < 100 ? data.thanks_count : '99+';
+                } else {
+                    // Добавляем счётчик если его не было
+                    const heart = document.querySelector('.thanks-heart');
+                    if (heart) {
+                        const span = document.createElement('span');
+                        span.className = 'thanks-count';
+                        span.textContent = '1';
+                        heart.appendChild(span);
+                    }
+                }
+                // Показываем уведомление
+                showNotification('Благодарность отправлена! ❤️');
+            } else {
+                alert(data.error || 'Ошибка отправки');
+            }
+        } catch (e) {
+            alert('Ошибка сети');
+        }
+
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-heart mr-2"></i>Отправить благодарность';
+    }
+
+    // История благодарностей
+    async function showThanksHistory() {
+        document.getElementById('thanksHistoryModal').classList.add('active');
+
+        const listEl = document.getElementById('thanksHistoryList');
+        listEl.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i></div>';
+
+        try {
+            const response = await fetch(`/staff/${employeeId}/thanks/list`);
+            const data = await response.json();
+
+            if (data.thanks.length === 0) {
+                listEl.innerHTML = '<p class="text-center text-gray-500 py-4">Пока нет благодарностей</p>';
+            } else {
+                listEl.innerHTML = data.thanks.map(t => `
+                    <div class="thanks-item">
+                        <div class="flex items-center space-x-2 mb-2">
+                            <img src="/static/${t.from_user_photo}" class="w-8 h-8 rounded-full object-cover">
+                            <span class="font-medium text-gray-800">${t.from_user}</span>
+                            <span class="text-gray-400 text-sm">${t.created_at}</span>
+                        </div>
+                        <p class="text-gray-600">${t.message}</p>
+                    </div>
+                `).join('');
+            }
+        } catch (e) {
+            listEl.innerHTML = '<p class="text-center text-red-500 py-4">Ошибка загрузки</p>';
+        }
+    }
+
+    function closeThanksHistoryModal(e) {
+        if (e && e.target !== e.currentTarget) return;
+        document.getElementById('thanksHistoryModal').classList.remove('active');
+    }
+
+    // Уведомление
+    function showNotification(message) {
+        const notif = document.createElement('div');
+        notif.className = 'fixed bottom-4 right-4 px-6 py-3 bg-gradient-to-r from-red-400 to-pink-500 text-white rounded-xl shadow-lg z-50';
+        notif.innerHTML = message;
+        document.body.appendChild(notif);
+        setTimeout(() => notif.remove(), 3000);
+    }
+</script>
+{% endblock %}

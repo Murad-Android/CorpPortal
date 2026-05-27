@@ -1,0 +1,143 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Дизайн сайта | Админ-панель{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">
+        <i class="fas fa-palette text-blue-500 mr-2"></i>Дизайн сайта
+    </h1>
+
+    <div class="bg-white rounded-2xl shadow-sm p-6">
+        <form method="POST" class="space-y-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Название сайта</label>
+                <input type="text" name="site_name" value="{{ settings.site_name }}"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+                <p class="text-xs text-gray-500 mt-1">Отображается в заголовке и вкладке браузера</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Основной цвет</label>
+                    <div class="flex items-center space-x-3">
+                        <input type="color" name="primary_color" value="{{ settings.primary_color }}"
+                            class="w-12 h-12 rounded-lg border border-gray-200 cursor-pointer" id="primaryColor">
+                        <input type="text" value="{{ settings.primary_color }}"
+                            class="flex-1 px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none font-mono"
+                            id="primaryColorText" onchange="document.getElementById('primaryColor').value = this.value">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Вторичный цвет</label>
+                    <div class="flex items-center space-x-3">
+                        <input type="color" name="secondary_color" value="{{ settings.secondary_color }}"
+                            class="w-12 h-12 rounded-lg border border-gray-200 cursor-pointer" id="secondaryColor">
+                        <input type="text" value="{{ settings.secondary_color }}"
+                            class="flex-1 px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none font-mono"
+                            id="secondaryColorText"
+                            onchange="document.getElementById('secondaryColor').value = this.value">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Предпросмотр -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Предпросмотр шапки</label>
+                <div class="rounded-xl overflow-hidden shadow-lg" id="headerPreview"
+                    style="background: linear-gradient(135deg, {{ settings.primary_color }} 0%, {{ settings.secondary_color }} 100%);">
+                    <div class="px-6 py-4 text-white">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
+                                <i class="fas fa-building text-blue-600"></i>
+                            </div>
+                            <span class="text-xl font-bold" id="siteNamePreview">{{ settings.site_name }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Пресеты цветов -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Готовые темы</label>
+                <div class="grid grid-cols-4 gap-2">
+                    <button type="button" onclick="setColors('#0078D7', '#005a9e')"
+                        class="p-3 rounded-xl border-2 border-transparent hover:border-gray-300"
+                        style="background: linear-gradient(135deg, #0078D7, #005a9e);">
+                        <span class="text-white text-xs">Синяя</span>
+                    </button>
+                    <button type="button" onclick="setColors('#10B981', '#059669')"
+                        class="p-3 rounded-xl border-2 border-transparent hover:border-gray-300"
+                        style="background: linear-gradient(135deg, #10B981, #059669);">
+                        <span class="text-white text-xs">Зелёная</span>
+                    </button>
+                    <button type="button" onclick="setColors('#8B5CF6', '#7C3AED')"
+                        class="p-3 rounded-xl border-2 border-transparent hover:border-gray-300"
+                        style="background: linear-gradient(135deg, #8B5CF6, #7C3AED);">
+                        <span class="text-white text-xs">Фиолетовая</span>
+                    </button>
+                    <button type="button" onclick="setColors('#F59E0B', '#D97706')"
+                        class="p-3 rounded-xl border-2 border-transparent hover:border-gray-300"
+                        style="background: linear-gradient(135deg, #F59E0B, #D97706);">
+                        <span class="text-white text-xs">Оранжевая</span>
+                    </button>
+                    <button type="button" onclick="setColors('#EF4444', '#DC2626')"
+                        class="p-3 rounded-xl border-2 border-transparent hover:border-gray-300"
+                        style="background: linear-gradient(135deg, #EF4444, #DC2626);">
+                        <span class="text-white text-xs">Красная</span>
+                    </button>
+                    <button type="button" onclick="setColors('#EC4899', '#DB2777')"
+                        class="p-3 rounded-xl border-2 border-transparent hover:border-gray-300"
+                        style="background: linear-gradient(135deg, #EC4899, #DB2777);">
+                        <span class="text-white text-xs">Розовая</span>
+                    </button>
+                    <button type="button" onclick="setColors('#1F2937', '#111827')"
+                        class="p-3 rounded-xl border-2 border-transparent hover:border-gray-300"
+                        style="background: linear-gradient(135deg, #1F2937, #111827);">
+                        <span class="text-white text-xs">Тёмная</span>
+                    </button>
+                    <button type="button" onclick="setColors('#14B8A6', '#0D9488')"
+                        class="p-3 rounded-xl border-2 border-transparent hover:border-gray-300"
+                        style="background: linear-gradient(135deg, #14B8A6, #0D9488);">
+                        <span class="text-white text-xs">Бирюзовая</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-4 border-t">
+                <button type="submit" class="px-6 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">
+                    <i class="fas fa-save mr-2"></i>Сохранить
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.getElementById('primaryColor').addEventListener('input', updatePreview);
+    document.getElementById('secondaryColor').addEventListener('input', updatePreview);
+    document.querySelector('input[name="site_name"]').addEventListener('input', function () {
+        document.getElementById('siteNamePreview').textContent = this.value;
+    });
+
+    function updatePreview() {
+        const primary = document.getElementById('primaryColor').value;
+        const secondary = document.getElementById('secondaryColor').value;
+        document.getElementById('primaryColorText').value = primary;
+        document.getElementById('secondaryColorText').value = secondary;
+        document.getElementById('headerPreview').style.background =
+            `linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)`;
+    }
+
+    function setColors(primary, secondary) {
+        document.getElementById('primaryColor').value = primary;
+        document.getElementById('secondaryColor').value = secondary;
+        document.querySelector('input[name="primary_color"]').value = primary;
+        document.querySelector('input[name="secondary_color"]').value = secondary;
+        updatePreview();
+    }
+</script>
+{% endblock %}

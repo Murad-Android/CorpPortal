@@ -1,0 +1,119 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Сотрудники | Админ-панель{% endblock %}
+
+{% block content %}
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">Сотрудники</h1>
+        <p class="text-gray-600">Управление справочником сотрудников</p>
+    </div>
+    <a href="{{ url_for('admin.staff_create') }}"
+        class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors">
+        <i class="fas fa-plus mr-2"></i>Добавить
+    </a>
+</div>
+
+<!-- Search -->
+<div class="bg-white rounded-2xl shadow-sm p-4 mb-6">
+    <form method="GET" class="flex items-center space-x-2">
+        <div class="relative flex-1">
+            <input type="text" name="search" value="{{ search }}" placeholder="Поиск по ФИО или email..."
+                class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        </div>
+        <button type="submit" class="px-4 py-2 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+            Найти
+        </button>
+    </form>
+</div>
+
+<!-- Staff Table -->
+<div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50 border-b border-gray-100">
+                <tr>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Сотрудник</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase hidden md:table-cell">
+                        Должность</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase hidden lg:table-cell">
+                        Отдел</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">
+                        Телефон</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Статус</th>
+                    <th class="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Действия</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for employee in staff.items %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center space-x-3">
+                            <img src="{{ url_for('static', filename=employee.photo|user_photo) }}"
+                                alt="{{ employee.full_name }}" class="w-10 h-10 rounded-full object-cover bg-gray-200">
+                            <div>
+                                <p class="font-medium text-gray-800">{{ employee.full_name }}</p>
+                                <p class="text-sm text-gray-500">{{ employee.email or '-' }}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-gray-600 hidden md:table-cell">{{ employee.position or '-' }}</td>
+                    <td class="px-6 py-4 text-gray-600 hidden lg:table-cell">{{ employee.department or '-' }}</td>
+                    <td class="px-6 py-4 text-gray-600 hidden sm:table-cell">{{ employee.phone or
+                        employee.internal_phone or '-' }}</td>
+                    <td class="px-6 py-4">
+                        {% if employee.is_active %}
+                        <span
+                            class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">Работает</span>
+                        {% else %}
+                        <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">Уволен</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <div class="flex items-center justify-end space-x-2">
+                            <a href="{{ url_for('admin.staff_edit', id=employee.id) }}"
+                                class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center hover:bg-blue-200 transition-colors">
+                                <i class="fas fa-edit text-sm"></i>
+                            </a>
+                            <form method="POST" action="{{ url_for('admin.staff_delete', id=employee.id) }}"
+                                onsubmit="return confirm('Удалить сотрудника?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit"
+                                    class="w-8 h-8 bg-red-100 text-red-600 rounded-lg flex items-center justify-center hover:bg-red-200 transition-colors">
+                                    <i class="fas fa-trash text-sm"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                        <i class="fas fa-users text-4xl mb-3 text-gray-300"></i>
+                        <p>Сотрудники не найдены</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if staff.pages > 1 %}
+    <div class="px-6 py-4 border-t border-gray-100 flex justify-center">
+        <nav class="flex items-center space-x-1">
+            {% for page_num in staff.iter_pages() %}
+            {% if page_num %}
+            <a href="{{ url_for('admin.staff', page=page_num, search=search) }}"
+                class="px-3 py-1 rounded {% if page_num == staff.page %}bg-blue-500 text-white{% else %}hover:bg-gray-100{% endif %}">
+                {{ page_num }}
+            </a>
+            {% else %}
+            <span class="px-2">...</span>
+            {% endif %}
+            {% endfor %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

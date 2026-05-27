@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Заявки подчинённых{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Заявки на отпуск</h1>
+        <p class="text-gray-600">Согласование заявок подчинённых</p>
+    </div>
+
+    <!-- Pending requests -->
+    {% if pending %}
+    <div class="mb-8">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <span class="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center">
+                <span class="text-yellow-700 text-sm font-bold">{{ pending|length }}</span>
+            </span>
+            Ожидают согласования
+        </h2>
+
+        <div class="space-y-4">
+            {% for req in pending %}
+            <div class="bg-white rounded-2xl shadow-sm border border-yellow-200 p-6">
+                <div class="flex flex-col lg:flex-row lg:items-start gap-4">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
+                                <img src="{{ url_for('static', filename=req.user.photo|user_photo) }}" alt=""
+                                    class="w-full h-full object-cover">
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-900">{{ req.user.full_name }}</h3>
+                                <p class="text-sm text-gray-500">{{ req.user.position or req.user.department }}</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-3 p-4 bg-gray-50 rounded-xl">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                <div>
+                                    <span class="text-gray-500">Период</span>
+                                    <p class="font-medium">{{ req.start_date.strftime('%d.%m.%Y') }} — {{
+                                        req.end_date.strftime('%d.%m.%Y') }}</p>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500">Дней</span>
+                                    <p class="font-medium">{{ req.days_count }}</p>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500">Тип</span>
+                                    <p class="font-medium">{{ req.vacation_type_display }}</p>
+                                </div>
+                                <div>
+                                    <span class="text-gray-500">Подано</span>
+                                    <p class="font-medium">{{ req.created_at.strftime('%d.%m.%Y') }}</p>
+                                </div>
+                            </div>
+                            {% if req.comment %}
+                            <div class="mt-3 pt-3 border-t border-gray-200">
+                                <span class="text-gray-500 text-sm">Комментарий:</span>
+                                <p class="text-sm">{{ req.comment }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-2 lg:w-64">
+                        <!-- Approve form -->
+                        <form method="POST" action="{{ url_for('vacations.manager_approve', id=req.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="comment" value="">
+                            <button type="submit"
+                                class="w-full px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 font-medium">
+                                <i class="fas fa-check mr-2"></i> Одобрить
+                            </button>
+                        </form>
+
+                        <!-- Reject form -->
+                        <button onclick="showRejectModal({{ req.id }})"
+                            class="w-full px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 font-medium">
+                            <i class="fas fa-times mr-2"></i> Отклонить
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center mb-8">
+        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-check text-green-500 text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900">Нет заявок на согласование</h3>
+        <p class="text-gray-600">Все заявки обработаны</p>
+    </div>
+    {% endif %}
+
+    <!-- Processed requests -->
+    {% if processed %}
+    <div>
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Обработанные заявки</h2>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Сотрудник</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Период</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Статус</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Дата</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for req in processed %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
+                                    <img src="{{ url_for('static', filename=req.user.photo|user_photo) }}" alt=""
+                                        class="w-full h-full object-cover">
+                                </div>
+                                <span class="font-medium text-gray-900">{{ req.user.short_name }}</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-600">
+                            {{ req.start_date.strftime('%d.%m') }} — {{ req.end_date.strftime('%d.%m.%Y') }}
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 rounded-full text-xs
+                                {% if req.status_color == 'green' %}bg-green-100 text-green-700
+                                {% elif req.status_color == 'yellow' %}bg-yellow-100 text-yellow-700
+                                {% elif req.status_color == 'blue' %}bg-blue-100 text-blue-700
+                                {% elif req.status_color == 'red' %}bg-red-100 text-red-700
+                                {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                {{ req.status_display }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-500">
+                            {{ req.updated_at.strftime('%d.%m.%Y') }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="mt-6">
+        <a href="{{ url_for('vacations.index') }}" class="text-blue-600 hover:text-blue-700">
+            <i class="fas fa-arrow-left mr-1"></i> Назад к календарю
+        </a>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div id="rejectModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Отклонить заявку</h3>
+        <form id="rejectForm" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Причина отклонения *</label>
+                <textarea name="comment" rows="3" required
+                    class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    placeholder="Укажите причину отклонения"></textarea>
+            </div>
+            <div class="flex gap-3">
+                <button type="submit"
+                    class="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 font-medium">
+                    Отклонить
+                </button>
+                <button type="button" onclick="hideRejectModal()"
+                    class="px-4 py-3 border border-gray-200 rounded-xl hover:bg-gray-50">
+                    Отмена
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function showRejectModal(id) {
+        document.getElementById('rejectForm').action = '/vacations/manager/' + id + '/reject';
+        document.getElementById('rejectModal').classList.remove('hidden');
+        document.getElementById('rejectModal').classList.add('flex');
+    }
+
+    function hideRejectModal() {
+        document.getElementById('rejectModal').classList.add('hidden');
+        document.getElementById('rejectModal').classList.remove('flex');
+    }
+
+    document.getElementById('rejectModal').addEventListener('click', function (e) {
+        if (e.target === this) hideRejectModal();
+    });
+</script>
+{% endblock %}

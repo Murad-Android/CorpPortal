@@ -1,0 +1,174 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Рекомендации кандидатов | Админ-панель{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex items-center justify-between flex-wrap gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">🍬 Рекомендации кандидатов</h1>
+            <p class="text-gray-600">Кандидаты, рекомендованные сотрудниками</p>
+        </div>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-2xl shadow-sm p-4">
+        <div class="flex items-center space-x-3">
+            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <i class="fas fa-users text-blue-500 text-xl"></i>
+            </div>
+            <div>
+                <p class="text-2xl font-bold text-gray-800">{{ stats.total }}</p>
+                <p class="text-sm text-gray-500">Всего рекомендаций</p>
+            </div>
+        </div>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm p-4">
+        <div class="flex items-center space-x-3">
+            <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                <i class="fas fa-clock text-amber-500 text-xl"></i>
+            </div>
+            <div>
+                <p class="text-2xl font-bold text-gray-800">{{ stats.new }}</p>
+                <p class="text-sm text-gray-500">Новых</p>
+            </div>
+        </div>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm p-4">
+        <div class="flex items-center space-x-3">
+            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <i class="fas fa-check-circle text-green-500 text-xl"></i>
+            </div>
+            <div>
+                <p class="text-2xl font-bold text-gray-800">{{ stats.hired }}</p>
+                <p class="text-sm text-gray-500">Принято на работу</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="bg-white rounded-2xl shadow-sm p-4 mb-6">
+    <form method="GET" class="flex flex-wrap gap-4 items-end">
+        <div>
+            <label class="block text-sm text-gray-600 mb-1">Статус</label>
+            <select name="status" onchange="this.form.submit()"
+                class="px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+                <option value="">Все статусы</option>
+                <option value="new" {{ 'selected' if current_status=='new' }}>Новые</option>
+                <option value="reviewed" {{ 'selected' if current_status=='reviewed' }}>Просмотрено</option>
+                <option value="contacted" {{ 'selected' if current_status=='contacted' }}>Связались</option>
+                <option value="hired" {{ 'selected' if current_status=='hired' }}>Принят</option>
+                <option value="rejected" {{ 'selected' if current_status=='rejected' }}>Отклонён</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm text-gray-600 mb-1">Вакансия</label>
+            <select name="vacancy_id" onchange="this.form.submit()"
+                class="px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+                <option value="">Все вакансии</option>
+                {% for v in vacancies %}
+                <option value="{{ v.id }}" {{ 'selected' if current_vacancy==v.id }}>{{ v.title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% if current_status or current_vacancy %}
+        <a href="{{ url_for('admin.referrals') }}" class="px-4 py-2 text-gray-600 hover:text-gray-800">
+            <i class="fas fa-times mr-1"></i>Сбросить
+        </a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Table -->
+<div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Кандидат</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Вакансия</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Рекомендовал</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Статус</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Дата</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Действия</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for ref in referrals.items %}
+                <tr class="hover:bg-gray-50 {{ 'bg-blue-50' if ref.status == 'new' }}">
+                    <td class="px-6 py-4">
+                        <div>
+                            <p class="font-medium text-gray-800">{{ ref.candidate_name }}</p>
+                            {% if ref.candidate_email %}
+                            <p class="text-sm text-gray-500">{{ ref.candidate_email }}</p>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-sm text-gray-700">{{ ref.vacancy.title if ref.vacancy else '-' }}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center space-x-2">
+                            <img src="{{ url_for('static', filename=ref.referrer.photo|user_photo) }}"
+                                class="w-8 h-8 rounded-full object-cover">
+                            <span class="text-sm text-gray-700">{{ ref.referrer.short_name if ref.referrer else '-'
+                                }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span
+                            class="px-2 py-1 text-xs rounded-full bg-{{ ref.status_color }}-100 text-{{ ref.status_color }}-700">
+                            {{ ref.status_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-500">
+                        {{ ref.created_at.strftime('%d.%m.%Y') }}
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center space-x-2">
+                            <a href="{{ url_for('admin.referral_detail', id=ref.id) }}"
+                                class="px-3 py-1 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 text-sm">
+                                <i class="fas fa-eye mr-1"></i>Открыть
+                            </a>
+                            {% if ref.resume_file %}
+                            <a href="{{ url_for('admin.referral_download', id=ref.id) }}"
+                                class="px-3 py-1 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 text-sm">
+                                <i class="fas fa-download"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                        <i class="fas fa-inbox text-4xl text-gray-300 mb-3"></i>
+                        <p>Рекомендаций пока нет</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if referrals.pages > 1 %}
+    <div class="px-6 py-4 border-t border-gray-100">
+        <div class="flex justify-center space-x-2">
+            {% for page in referrals.iter_pages() %}
+            {% if page %}
+            <a href="{{ url_for('admin.referrals', page=page, status=current_status, vacancy_id=current_vacancy) }}"
+                class="px-3 py-1 rounded {{ 'bg-blue-500 text-white' if page == referrals.page else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }}">
+                {{ page }}
+            </a>
+            {% else %}
+            <span class="px-3 py-1">...</span>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Результаты: {{ survey.title }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 max-w-2xl">
+    <div class="mb-6">
+        <a href="{{ url_for('surveys.index') }}" class="text-blue-500 hover:underline mb-2 inline-block">
+            <i class="fas fa-arrow-left mr-1"></i>Все опросы
+        </a>
+        <h1 class="text-2xl font-bold text-gray-800">{{ survey.title }}</h1>
+        <p class="text-gray-500">Результаты опроса</p>
+    </div>
+
+    <!-- Статистика -->
+    <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+        <div class="grid grid-cols-3 gap-4 text-center">
+            <div>
+                <div class="text-2xl font-bold text-blue-600">{{ total_responses }}</div>
+                <div class="text-sm text-gray-500">Ответов</div>
+            </div>
+            <div>
+                <div class="text-2xl font-bold text-green-600">{{ questions|length }}</div>
+                <div class="text-sm text-gray-500">Вопросов</div>
+            </div>
+            <div>
+                {% if survey.is_anonymous %}
+                <div class="text-purple-500"><i class="fas fa-user-secret text-2xl"></i></div>
+                <div class="text-sm text-gray-500">Анонимный</div>
+                {% else %}
+                <div class="text-blue-500"><i class="fas fa-users text-2xl"></i></div>
+                <div class="text-sm text-gray-500">Открытый</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Результаты -->
+    <div class="space-y-6">
+        {% for question in questions %}
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+            <div class="mb-4">
+                <span class="text-sm text-gray-500">Вопрос {{ loop.index }}</span>
+                <h3 class="text-lg font-medium text-gray-800">{{ question.text }}</h3>
+            </div>
+
+            {% if question.question_type == 'text' %}
+            <div class="space-y-2 max-h-48 overflow-y-auto">
+                {% for answer in question.answers %}
+                {% if answer.text_answer %}
+                <div class="p-3 bg-gray-50 rounded-lg text-sm">
+                    {{ answer.text_answer }}
+                </div>
+                {% endif %}
+                {% else %}
+                <p class="text-gray-500 text-center py-4">Ответов пока нет</p>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="space-y-3">
+                {% for option in question.options %}
+                {% set votes = option.get_votes_count() %}
+                {% set percentage = option.get_percentage() %}
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-sm font-medium">{{ option.text }}</span>
+                        <span class="text-sm text-gray-500">{{ votes }} ({{ percentage }}%)</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                        <div class="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500"
+                            style="width: {{ percentage }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="mt-6 text-center">
+        <a href="{{ url_for('surveys.index') }}"
+            class="px-6 py-2 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200">
+            <i class="fas fa-arrow-left mr-2"></i>К списку опросов
+        </a>
+    </div>
+</div>
+{% endblock %}

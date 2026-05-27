@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Мои заявки | Корпоративный портал{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4">
+    <a href="{{ url_for('main.index') }}" class="inline-flex items-center text-blue-500 hover:text-blue-600 mb-4">
+        <i class="fas fa-arrow-left mr-2"></i>На главную
+    </a>
+
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">Мои заявки</h1>
+
+    <div class="grid lg:grid-cols-2 gap-6">
+        <!-- Pass Requests -->
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-gray-100 flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-800">
+                    <i class="fas fa-id-card text-blue-500 mr-2"></i>Заявки на пропуск
+                </h2>
+                <a href="{{ url_for('requests.pass_request') }}" class="text-blue-500 hover:text-blue-600 text-sm">
+                    <i class="fas fa-plus mr-1"></i>Создать
+                </a>
+            </div>
+
+            {% if pass_requests %}
+            <div class="divide-y divide-gray-100">
+                {% for req in pass_requests %}
+                <div class="p-4">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="font-medium text-gray-800">{{ req.visitor_name }}</p>
+                            <p class="text-sm text-gray-500">{{ req.visit_date.strftime('%d.%m.%Y') }}</p>
+                        </div>
+                        <span class="px-2 py-1 rounded-full text-xs font-medium
+                            {% if req.status == 'pending' %}bg-yellow-100 text-yellow-700
+                            {% elif req.status == 'approved' %}bg-green-100 text-green-700
+                            {% else %}bg-red-100 text-red-700{% endif %}">
+                            {% if req.status == 'pending' %}На рассмотрении
+                            {% elif req.status == 'approved' %}Одобрено
+                            {% else %}Отклонено{% endif %}
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="p-8 text-center text-gray-500">
+                <i class="fas fa-inbox text-3xl mb-2 text-gray-300"></i>
+                <p>Нет заявок</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Order Requests -->
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-gray-100 flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-800">
+                    <i class="fas fa-shopping-cart text-purple-500 mr-2"></i>Заявки на заказ
+                </h2>
+                <a href="{{ url_for('requests.order_request') }}" class="text-purple-500 hover:text-purple-600 text-sm">
+                    <i class="fas fa-plus mr-1"></i>Создать
+                </a>
+            </div>
+
+            {% if order_requests %}
+            <div class="divide-y divide-gray-100">
+                {% for req in order_requests %}
+                <div class="p-4">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="font-medium text-gray-800">{{ req.item_name }}</p>
+                            <p class="text-sm text-gray-500">{{ req.department }} • {{ req.quantity }} шт.</p>
+                        </div>
+                        <span class="px-2 py-1 rounded-full text-xs font-medium
+                            {% if req.status == 'pending' %}bg-yellow-100 text-yellow-700
+                            {% elif req.status == 'approved' %}bg-blue-100 text-blue-700
+                            {% elif req.status == 'ordered' %}bg-purple-100 text-purple-700
+                            {% elif req.status == 'delivered' %}bg-green-100 text-green-700
+                            {% else %}bg-red-100 text-red-700{% endif %}">
+                            {% if req.status == 'pending' %}На рассмотрении
+                            {% elif req.status == 'approved' %}Одобрено
+                            {% elif req.status == 'ordered' %}Заказано
+                            {% elif req.status == 'delivered' %}Доставлено
+                            {% else %}Отклонено{% endif %}
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="p-8 text-center text-gray-500">
+                <i class="fas fa-inbox text-3xl mb-2 text-gray-300"></i>
+                <p>Нет заявок</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

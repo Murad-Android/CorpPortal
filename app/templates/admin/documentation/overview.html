@@ -1,0 +1,94 @@
+<div class="doc-section active" data-section-id="overview">
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">Обзор корпоративного портала</h1>
+
+    <div class="info-box info">
+        <p><strong>Версия:</strong> 3.1</p>
+        <p><strong>Технологии:</strong> Python 3.12, Flask, SQLAlchemy</p>
+        <p><strong>База данных:</strong> SQLite / PostgreSQL</p>
+    </div>
+
+    <h2>Введение</h2>
+    <p>Корпоративный портал - это комплексная система для управления внутренними процессами компании. Система включает
+        модули для управления пользователями, публикации контента, обработки заявок и интеграции с корпоративными
+        сервисами.</p>
+
+    <h2>Основные возможности</h2>
+
+    <h3>Управление пользователями</h3>
+    <ul class="list-disc list-inside space-y-2 ml-4">
+        <li>Создание и редактирование пользователей</li>
+        <li>Гибкая система ролей и прав доступа</li>
+        <li>Интеграция с Active Directory (LDAP)</li>
+        <li>Автоматическая синхронизация данных</li>
+    </ul>
+
+    <h3>Управление контентом</h3>
+    <ul class="list-disc list-inside space-y-2 ml-4">
+        <li><strong>Новости</strong> - публикация новостей с комментариями</li>
+        <li><strong>Вакансии</strong> - размещение вакансий и управление откликами</li>
+        <li><strong>Опросы</strong> - создание опросов с различными типами вопросов</li>
+        <li><strong>Тесты</strong> - обучающие тесты с автоматической проверкой</li>
+        <li><strong>Центр безопасности</strong> - важная информация по безопасности</li>
+    </ul>
+
+    <h3>Система заявок</h3>
+    <ul class="list-disc list-inside space-y-2 ml-4">
+        <li><strong>Пропуска</strong> - оформление пропусков для посетителей</li>
+        <li><strong>Заказы</strong> - заявки на заказ товаров и оборудования</li>
+        <li><strong>Отпуска</strong> - планирование отпусков с автоматическим учетом лимитов</li>
+    </ul>
+
+    <h3>Дополнительные модули</h3>
+    <ul class="list-disc list-inside space-y-2 ml-4">
+        <li>Справочник сотрудников</li>
+        <li>Внутренний мессенджер</li>
+        <li>Совместные таблицы</li>
+        <li>Система уведомлений</li>
+    </ul>
+
+    <h2>Структура админ-панели</h2>
+    <p>Админ-панель организована по функциональным разделам:</p>
+
+    <pre><code>📊 Панель управления
+├── 📰 Контент (новости, вакансии, опросы, тесты)
+├── 📋 Заявки (пропуска, заказы, отпуска)
+├── 👥 Пользователи (список, роли, сотрудники)
+└── ⚙️ Система (настройки, интеграции, логи)</code></pre>
+
+    <h2>Доступ к админ-панели</h2>
+    <p>Для доступа к админ-панели необходимо:</p>
+    <ol class="list-decimal list-inside space-y-2 ml-4">
+        <li>Иметь учетную запись с правами администратора</li>
+        <li>Перейти по адресу: <code>/admin</code></li>
+        <li>Войти используя свои учетные данные</li>
+    </ol>
+
+    <div class="info-box warning">
+        <p><strong>Важно:</strong> Доступ к админ-панели имеют только пользователи с соответствующими правами. Обычные
+            пользователи не увидят ссылку на админ-панель.</p>
+    </div>
+
+    <h2>Быстрый старт</h2>
+    <p>Для начала работы рекомендуется:</p>
+    <ol class="list-decimal list-inside space-y-2 ml-4">
+        <li>Ознакомиться с разделом <a href="#" class="text-blue-600 hover:underline"
+                onclick="showSection('users-roles')">Роли и права</a></li>
+        <li>Настроить <a href="#" class="text-blue-600 hover:underline"
+                onclick="showSection('integration-ldap')">интеграцию с LDAP</a> (если используется)</li>
+        <li>Настроить <a href="#" class="text-blue-600 hover:underline" onclick="showSection('integration-smtp')">SMTP
+                для уведомлений</a></li>
+        <li>Создать необходимых <a href="#" class="text-blue-600 hover:underline"
+                onclick="showSection('users-create')">пользователей</a></li>
+        <li>Настроить <a href="#" class="text-blue-600 hover:underline" onclick="showSection('settings-menu')">меню
+                портала</a></li>
+    </ol>
+
+    <h2>Поддержка</h2>
+    <p>При возникновении вопросов:</p>
+    <ul class="list-disc list-inside space-y-2 ml-4">
+        <li>Используйте поиск по документации (поле вверху слева)</li>
+        <li>Проверьте раздел <a href="#" class="text-blue-600 hover:underline"
+                onclick="showSection('integration-logs')">Логи и мониторинг</a></li>
+        <li>Обратитесь к технической поддержке</li>
+    </ul>
+</div>

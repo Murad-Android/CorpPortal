@@ -1,0 +1,114 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Настройки SMTP | Админ-панель{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+    <div class="mb-6">
+        <a href="{{ url_for('admin.index') }}" class="inline-flex items-center text-blue-500 hover:text-blue-600 mb-4">
+            <i class="fas fa-arrow-left mr-2"></i>Назад
+        </a>
+        <h1 class="text-2xl font-bold text-gray-800">Настройки SMTP</h1>
+        <p class="text-gray-600">Конфигурация отправки email уведомлений</p>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <form method="POST" class="p-6 space-y-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <!-- Enable/Disable -->
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                <div>
+                    <p class="font-medium text-gray-800">Email уведомления</p>
+                    <p class="text-sm text-gray-500">Включить отправку email уведомлений</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" name="is_enabled" {% if smtp.is_enabled %}checked{% endif %}
+                        class="sr-only peer">
+                    <div
+                        class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500">
+                    </div>
+                </label>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">SMTP сервер</label>
+                    <input type="text" name="server" value="{{ smtp.server or '' }}" placeholder="smtp.mail.ru"
+                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Порт</label>
+                    <input type="number" name="port" value="{{ smtp.port or 587 }}"
+                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Логин</label>
+                    <input type="text" name="username" value="{{ smtp.username or '' }}"
+                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Пароль</label>
+                    <input type="password" name="password" placeholder="Оставьте пустым, чтобы не менять"
+                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email отправителя</label>
+                    <input type="email" name="sender_email" value="{{ smtp.sender_email or '' }}"
+                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Имя отправителя</label>
+                    <input type="text" name="sender_name" value="{{ smtp.sender_name or 'Корпоративный портал' }}"
+                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-6">
+                <label class="flex items-center cursor-pointer">
+                    <input type="checkbox" name="use_tls" {% if smtp.use_tls %}checked{% endif %}
+                        class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                    <span class="ml-2 text-gray-700">Использовать TLS</span>
+                </label>
+                <label class="flex items-center cursor-pointer">
+                    <input type="checkbox" name="use_ssl" {% if smtp.use_ssl %}checked{% endif %}
+                        class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                    <span class="ml-2 text-gray-700">Использовать SSL</span>
+                </label>
+            </div>
+
+            <div class="flex justify-between pt-4">
+                <button type="submit"
+                    class="px-6 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors">
+                    Сохранить настройки
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Test Email -->
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden mt-6">
+        <div class="p-6">
+            <h2 class="font-semibold text-gray-800 mb-4">Тестовое письмо</h2>
+            <form method="POST" action="{{ url_for('admin.settings_smtp_test') }}" class="flex items-end space-x-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email для теста</label>
+                    <input type="email" name="test_email" value="{{ current_user.email }}"
+                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+                </div>
+                <button type="submit"
+                    class="px-6 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors">
+                    <i class="fas fa-paper-plane mr-2"></i>Отправить
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

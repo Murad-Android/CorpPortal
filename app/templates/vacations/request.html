@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Заявка на отпуск{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+    .flatpickr-day.blocked {
+        background-color: #fee2e2 !important;
+        color: #991b1b !important;
+        cursor: not-allowed !important;
+    }
+
+    .flatpickr-day.blocked:hover {
+        background-color: #fecaca !important;
+    }
+
+    .vacation-type-option.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        background-color: #f3f4f6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="mb-6">
+        <a href="{{ url_for('vacations.index') }}" class="text-blue-600 hover:text-blue-700 flex items-center gap-2">
+            <i class="fas fa-arrow-left"></i> Назад к календарю
+        </a>
+    </div>
+
+    <!-- Баланс отпускных дней -->
+    <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl shadow-lg p-6 mb-6 text-white">
+        <h2 class="text-lg font-semibold mb-4">Ваш баланс отпускных дней</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm opacity-90">Ежегодный оплачиваемый</span>
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="text-3xl font-bold">{{ real_annual_available }}</div>
+                <div class="text-xs opacity-75 mt-1">
+                    из {{ balance.annual_days_total }} дней
+                    {% if pending_annual_days > 0 %}
+                    <br>({{ pending_annual_days }} дн. в ожидающих заявках)
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if settings.dayoff_enabled %}
+            <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm opacity-90">Day Off</span>
+                    <i class="fas fa-umbrella-beach"></i>
+                </div>
+                <div class="text-3xl font-bold">{{ real_dayoff_available }}</div>
+                <div class="text-xs opacity-75 mt-1">
+                    из {{ balance.dayoff_days_total }} дней
+                    {% if pending_dayoff_days > 0 %}
+                    <br>({{ pending_dayoff_days }} дн. в ожидающих заявках)
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">Заявка на отпуск</h1>
+
+        <form method="POST" class="space-y-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Дата начала *</label>
+                    <input type="text" name="start_date" id="start_date" required
+                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Выберите дату">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Дата окончания *</label>
+                    <input type="text" name="end_date" id="end_date" required
+                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Выберите дату">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Тип отпуска</label>
+                <select name="vacation_type" id="vacation_type"
+                    class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="annual" {% if real_annual_available==0 %}disabled
+                        style="color: #9ca3af; background-color: #f3f4f6;" {% endif %} {% if real_annual_available> 0
+                        %}selected{% endif %}>
+                        Ежегодный оплачиваемый{% if real_annual_available == 0 %} (дни закончились){% endif %}
+                    </option>
+                    {% if settings.dayoff_enabled %}
+                    <option value="dayoff" {% if real_dayoff_available==0 %}disabled
+                        style="color: #9ca3af; background-color: #f3f4f6;" {% endif %}>
+                        Day Off{% if real_dayoff_available == 0 %} (дни закончились){% endif %}
+                    </option>
+                    {% endif %}
+                    <option value="unpaid" {% if real_annual_available==0 and (not settings.dayoff_enabled or
+                        real_dayoff_available==0) %}selected{% endif %}>
+                        За свой счёт
+                    </option>
+                </select>
+
+                {% if real_annual_available == 0 %}
+                <div class="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    Вы использовали все дни ежегодного оплачиваемого отпуска{% if pending_annual_days > 0 %} (включая {{
+                    pending_annual_days }} дн. в ожидающих заявках){% endif %}. Доступен только отпуск за свой счёт.
+                </div>
+                {% endif %}
+
+                {% if settings.dayoff_enabled and real_dayoff_available == 0 %}
+                <div class="mt-2 p-3 bg-purple-50 border border-purple-200 rounded-xl text-sm text-purple-700">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Вы использовали все дни Day Off{% if pending_dayoff_days > 0 %} (включая {{ pending_dayoff_days }}
+                    дн. в ожидающих заявках){% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Комментарий</label>
+                <textarea name="comment" rows="3"
+                    class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Дополнительная информация (необязательно)"></textarea>
+            </div>
+
+            <!-- Info about blocked dates -->
+            {% if blocked_dates %}
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-exclamation-triangle text-amber-500 mt-1"></i>
+                    <div>
+                        <p class="font-medium text-amber-800">Внимание!</p>
+                        <p class="text-sm text-amber-700">Некоторые даты недоступны из-за пересечения с отпусками
+                            сотрудников, с которыми вы не можете отсутствовать одновременно.</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Approval flow info -->
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-info-circle text-blue-500 mt-1"></i>
+                    <div>
+                        <p class="font-medium text-blue-800">Процесс согласования</p>
+                        <ol class="text-sm text-blue-700 mt-2 space-y-1">
+                            <li>1. Заявка отправляется вашему руководителю</li>
+                            <li>2. После одобрения руководителем — передаётся в HR</li>
+                            <li>3. HR принимает окончательное решение</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button type="submit"
+                    class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium">
+                    <i class="fas fa-paper-plane mr-2"></i> Отправить заявку
+                </button>
+                <a href="{{ url_for('vacations.index') }}"
+                    class="px-6 py-3 border border-gray-200 rounded-xl hover:bg-gray-50">
+                    Отмена
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ru.js"></script>
+<script>
+    const blockedDates = {{ blocked_dates | tojson }};
+
+    const commonConfig = {
+        locale: 'ru',
+        dateFormat: 'Y-m-d',
+        altInput: true,
+        altFormat: 'd.m.Y',
+        minDate: 'today',
+        disable: blockedDates,
+        onDayCreate: function (dObj, dStr, fp, dayElem) {
+            const dateStr = dayElem.dateObj.toISOString().split('T')[0];
+            if (blockedDates.includes(dateStr)) {
+                dayElem.classList.add('blocked');
+            }
+        }
+    };
+
+    const startPicker = flatpickr('#start_date', {
+        ...commonConfig,
+        onChange: function (selectedDates) {
+            if (selectedDates[0]) {
+                endPicker.set('minDate', selectedDates[0]);
+            }
+        }
+    });
+
+    const endPicker = flatpickr('#end_date', {
+        ...commonConfig
+    });
+</script>
+{% endblock %}

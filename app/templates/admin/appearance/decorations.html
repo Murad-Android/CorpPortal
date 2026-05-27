@@ -1,0 +1,139 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Украшения сайта | Админ-панель{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">
+        <i class="fas fa-magic text-blue-500 mr-2"></i>Украшения сайта
+    </h1>
+    <a href="{{ url_for('appearance.decoration_create') }}"
+        class="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">
+        <i class="fas fa-plus mr-2"></i>Добавить украшение
+    </a>
+</div>
+
+<!-- Типы украшений -->
+<div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+    <h2 class="text-lg font-semibold text-gray-800 mb-4">Доступные типы украшений</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for type_key, type_info in decoration_types.items() %}
+        <div class="p-4 border border-gray-200 rounded-xl hover:border-blue-300 transition-colors">
+            <div class="flex items-center space-x-3 mb-2">
+                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-{{ type_info.icon }} text-blue-500"></i>
+                </div>
+                <div>
+                    <h3 class="font-medium text-gray-800">{{ type_info.name }}</h3>
+                </div>
+            </div>
+            <p class="text-sm text-gray-500 mb-3">{{ type_info.description }}</p>
+            <a href="{{ url_for('appearance.decoration_preview', decoration_type=type_key) }}" target="_blank"
+                class="text-sm text-blue-500 hover:text-blue-600">
+                <i class="fas fa-eye mr-1"></i>Предпросмотр
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Список украшений -->
+<div class="bg-white rounded-2xl shadow-sm">
+    <div class="p-6 border-b">
+        <h2 class="text-lg font-semibold text-gray-800">Настроенные украшения</h2>
+    </div>
+
+    {% if decorations %}
+    <div class="divide-y">
+        {% for decoration in decorations %}
+        <div class="p-4 flex items-center justify-between hover:bg-gray-50">
+            <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center
+                    {% if decoration.is_active_now() %}bg-green-100{% else %}bg-gray-100{% endif %}">
+                    <i
+                        class="fas fa-{{ decoration_types[decoration.decoration_type].icon if decoration.decoration_type in decoration_types else 'star' }} 
+                        {% if decoration.is_active_now() %}text-green-500{% else %}text-gray-400{% endif %} text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-medium text-gray-800">{{ decoration.name }}</h3>
+                    <p class="text-sm text-gray-500">
+                        {{ decoration_types[decoration.decoration_type].name if decoration.decoration_type in
+                        decoration_types else decoration.decoration_type }}
+                    </p>
+                    <div class="flex items-center space-x-2 mt-1">
+                        {% if decoration.is_always_active %}
+                        <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">Всегда активно</span>
+                        {% elif decoration.start_date and decoration.end_date %}
+                        <span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
+                            {{ decoration.start_date.strftime('%d.%m') }} — {{ decoration.end_date.strftime('%d.%m.%Y')
+                            }}
+                        </span>
+                        {% endif %}
+
+                        {% if decoration.is_active_now() %}
+                        <span class="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs">
+                            <i class="fas fa-check-circle mr-1"></i>Активно сейчас
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <!-- Переключатель -->
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" class="sr-only peer" {% if decoration.is_enabled %}checked{% endif %}
+                        onchange="toggleDecoration({{ decoration.id }}, this)">
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer 
+                        peer-checked:after:translate-x-full peer-checked:after:border-white 
+                        after:content-[''] after:absolute after:top-[2px] after:left-[2px] 
+                        after:bg-white after:border-gray-300 after:border after:rounded-full 
+                        after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+
+                <a href="{{ url_for('appearance.decoration_edit', id=decoration.id) }}"
+                    class="p-2 text-gray-400 hover:text-blue-500 rounded-lg hover:bg-blue-50">
+                    <i class="fas fa-edit"></i>
+                </a>
+
+                <form method="POST" action="{{ url_for('appearance.decoration_delete', id=decoration.id) }}"
+                    onsubmit="return confirm('Удалить украшение?')" class="inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="p-12 text-center">
+        <i class="fas fa-magic text-4xl text-gray-300 mb-4"></i>
+        <p class="text-gray-500 mb-4">Украшений пока нет</p>
+        <a href="{{ url_for('appearance.decoration_create') }}"
+            class="inline-block px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">
+            <i class="fas fa-plus mr-2"></i>Создать первое украшение
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    function toggleDecoration(id, checkbox) {
+        fetch(`/appearance/decorations/${id}/toggle`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) {
+                    checkbox.checked = !checkbox.checked;
+                } else {
+                    location.reload();
+                }
+            })
+            .catch(() => checkbox.checked = !checkbox.checked);
+    }
+</script>
+{% endblock %}

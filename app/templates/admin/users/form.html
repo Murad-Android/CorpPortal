@@ -1,0 +1,258 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ 'Редактирование' if user else 'Создание' }} пользователя | Админ-панель{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('admin.users') }}" class="text-blue-500 hover:text-blue-600">
+        <i class="fas fa-arrow-left mr-2"></i>Назад к списку
+    </a>
+</div>
+
+<div class="bg-white rounded-2xl shadow-sm p-6">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">
+        {{ 'Редактирование пользователя' if user else 'Новый пользователь' }}
+    </h1>
+
+    <form method="POST" enctype="multipart/form-data" class="space-y-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Photo -->
+        <div class="flex items-center space-x-6">
+            <div class="shrink-0">
+                <img id="photo-preview"
+                    src="{{ url_for('static', filename=(user.photo if user and user.photo else '')|user_photo) }}"
+                    class="w-24 h-24 rounded-full object-cover bg-gray-200">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Фото</label>
+                <input type="file" name="photo" accept="image/*" onchange="previewPhoto(this)"
+                    class="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+            </div>
+        </div>
+
+        <!-- Account -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Логин *</label>
+                <input type="text" name="username" value="{{ user.username if user else '' }}" required
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                <input type="email" name="email" value="{{ user.email if user else '' }}" required
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+        </div>
+
+        <!-- Personal info -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Фамилия *</label>
+                <input type="text" name="lastname" value="{{ user.lastname or '' if user else '' }}" required
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Имя *</label>
+                <input type="text" name="firstname" value="{{ user.firstname or '' if user else '' }}" required
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Отчество</label>
+                <input type="text" name="middlename" value="{{ user.middlename or '' if user else '' }}"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Должность</label>
+                <input type="text" name="position" value="{{ user.position or '' if user else '' }}"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Отдел</label>
+                <input type="text" name="department" value="{{ user.department or '' if user else '' }}"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Телефон</label>
+                <input type="text" name="phone" value="{{ user.phone or '' if user else '' }}"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Внутренний телефон</label>
+                <input type="text" name="internal_phone" value="{{ user.internal_phone or '' if user else '' }}"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Расположение</label>
+            <input type="text" name="location" value="{{ user.location or '' if user else '' }}"
+                class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Дата рождения</label>
+                <input type="date" name="birthday"
+                    value="{{ user.birthday.strftime('%Y-%m-%d') if user and user.birthday else '' }}"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Дата приёма на работу</label>
+                <input type="date" name="hire_date"
+                    value="{{ user.hire_date.strftime('%Y-%m-%d') if user and user.hire_date else '' }}"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+        </div>
+
+        <!-- Manager -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Руководитель</label>
+            <select name="manager_id"
+                class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+                <option value="">Не указан</option>
+                {% for u in all_users %}
+                {% if not user or u.id != user.id %}
+                <option value="{{ u.id }}" {{ 'selected' if user and user.manager_id==u.id else '' }}>
+                    {{ u.full_name }} {% if u.position %}({{ u.position }}){% endif %}
+                </option>
+                {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Role -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Роль</label>
+            <select name="role_id"
+                class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+                <option value="">Без роли</option>
+                {% for role in roles %}
+                <option value="{{ role.id }}" {{ 'selected' if user and user.role_id==role.id else '' }}>
+                    {{ role.display_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Password -->
+        <div class="p-4 bg-gray-50 rounded-xl space-y-4">
+            <h3 class="font-medium text-gray-800">Пароль</h3>
+
+            <div class="flex items-center space-x-4">
+                <div class="flex-1">
+                    <input type="text" name="password" id="password" {{ 'placeholder="Оставьте пустым, чтобы не менять"'
+                        if user else 'required' }}
+                        class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none"
+                        minlength="8">
+                </div>
+                <button type="button" onclick="generatePassword()"
+                    class="px-4 py-2 bg-gray-200 rounded-xl hover:bg-gray-300 whitespace-nowrap">
+                    <i class="fas fa-random mr-2"></i>Сгенерировать
+                </button>
+            </div>
+
+            {% if not user %}
+            <div class="flex flex-wrap gap-4">
+                <label class="flex items-center">
+                    <input type="checkbox" name="generate_password" id="generate_password"
+                        onchange="togglePasswordField()"
+                        class="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500">
+                    <span class="ml-2 text-sm text-gray-700">Сгенерировать автоматически</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" name="send_password"
+                        class="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500">
+                    <span class="ml-2 text-sm text-gray-700">Отправить пароль на почту</span>
+                </label>
+            </div>
+            {% endif %}
+
+            <p class="text-xs text-gray-500">Минимум 8 символов, буквы в верхнем и нижнем регистре, цифры</p>
+        </div>
+
+        {% if user %}
+        <div class="flex items-center">
+            <input type="checkbox" name="is_active" id="is_active" {{ 'checked' if user.is_active else '' }}
+                class="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500">
+            <label for="is_active" class="ml-2 text-sm text-gray-700">Активный пользователь</label>
+        </div>
+
+        <!-- Статус сотрудника -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Статус сотрудника</label>
+            <div class="flex flex-wrap gap-4">
+                <label class="flex items-center cursor-pointer">
+                    <input type="radio" name="employment_status" value="working" {{ 'checked' if not
+                        user.employment_status or user.employment_status=='working' else '' }}
+                        class="w-4 h-4 text-green-500 border-gray-300 focus:ring-green-500">
+                    <span class="ml-2 text-sm text-gray-700"><i
+                            class="fas fa-check-circle text-green-500 mr-1"></i>Работает</span>
+                </label>
+                <label class="flex items-center cursor-pointer">
+                    <input type="radio" name="employment_status" value="vacation" {{ 'checked' if
+                        user.employment_status=='vacation' else '' }}
+                        class="w-4 h-4 text-blue-500 border-gray-300 focus:ring-blue-500">
+                    <span class="ml-2 text-sm text-gray-700"><i class="fas fa-umbrella-beach text-blue-500 mr-1"></i>В
+                        отпуске</span>
+                </label>
+                <label class="flex items-center cursor-pointer">
+                    <input type="radio" name="employment_status" value="fired" {{ 'checked' if
+                        user.employment_status=='fired' else '' }}
+                        class="w-4 h-4 text-red-500 border-gray-300 focus:ring-red-500">
+                    <span class="ml-2 text-sm text-gray-700"><i
+                            class="fas fa-user-slash text-red-500 mr-1"></i>Уволен</span>
+                </label>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="flex justify-end space-x-4 pt-4 border-t">
+            <a href="{{ url_for('admin.users') }}"
+                class="px-6 py-2 border border-gray-300 rounded-xl hover:bg-gray-50">Отмена</a>
+            <button type="submit" class="px-6 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">
+                {{ 'Сохранить' if user else 'Создать' }}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    function previewPhoto(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                document.getElementById('photo-preview').src = e.target.result;
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function generatePassword() {
+        fetch('{{ url_for("admin.generate_password") }}')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('password').value = data.password;
+            });
+    }
+
+    function togglePasswordField() {
+        const checkbox = document.getElementById('generate_password');
+        const passwordField = document.getElementById('password');
+        if (checkbox.checked) {
+            passwordField.value = '';
+            passwordField.disabled = true;
+            passwordField.required = false;
+        } else {
+            passwordField.disabled = false;
+            passwordField.required = true;
+        }
+    }
+</script>
+{% endblock %}

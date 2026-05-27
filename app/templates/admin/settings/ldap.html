@@ -1,0 +1,315 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Настройки LDAP | Админ-панель{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('admin.index') }}" class="inline-flex items-center text-blue-500 hover:text-blue-600 mb-4">
+        <i class="fas fa-arrow-left mr-2"></i>Назад
+    </a>
+    <div class="flex items-center justify-between flex-wrap gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">Настройки LDAP</h1>
+            <p class="text-gray-600">Интеграция с Active Directory</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            {% if ldap.is_enabled %}
+            <form method="POST" action="{{ url_for('admin.settings_ldap_sync') }}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit"
+                    onclick="this.disabled=true; this.innerHTML='<i class=\'fas fa-spinner fa-spin mr-2\'></i>Синхронизация...'; this.form.submit();"
+                    class="px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors">
+                    <i class="fas fa-sync mr-2"></i>Синхронизировать
+                </button>
+            </form>
+            {% endif %}
+            <form method="POST" action="{{ url_for('admin.fix_avatars') }}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit"
+                    class="px-4 py-2 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-colors">
+                    <i class="fas fa-image mr-2"></i>Исправить аватарки
+                </button>
+            </form>
+            <a href="{{ url_for('admin.settings_user_card') }}"
+                class="px-4 py-2 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition-colors">
+                <i class="fas fa-id-card mr-2"></i>Конструктор карточки
+            </a>
+        </div>
+    </div>
+    <p class="text-sm text-gray-500 mt-2">
+        <i class="fas fa-info-circle mr-1"></i>
+        Автоматическая синхронизация выполняется ежедневно в 12:00
+    </p>
+</div>
+
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+    <!-- Main Settings -->
+    <div class="bg-white rounded-2xl shadow-sm p-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Подключение</h2>
+
+        <form method="POST" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="flex items-center">
+                <input type="checkbox" name="is_enabled" id="is_enabled" {{ 'checked' if ldap.is_enabled else '' }}
+                    class="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500">
+                <label for="is_enabled" class="ml-2 text-sm font-medium text-gray-700">Включить LDAP авторизацию</label>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Сервер</label>
+                    <input type="text" name="server" value="{{ ldap.server or '' }}"
+                        placeholder="ldap://dc.domain.local"
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-blue-500 outline-none text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Порт</label>
+                    <input type="number" name="port" value="{{ ldap.port or 389 }}"
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-blue-500 outline-none text-sm">
+                </div>
+            </div>
+
+            <div class="flex items-center">
+                <input type="checkbox" name="use_ssl" id="use_ssl" {{ 'checked' if ldap.use_ssl else '' }}
+                    class="w-4 h-4 text-blue-500 border-gray-300 rounded">
+                <label for="use_ssl" class="ml-2 text-sm text-gray-700">Использовать SSL</label>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Домен</label>
+                <input type="text" name="domain" value="{{ ldap.domain or '' }}" placeholder="domain.local"
+                    class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-blue-500 outline-none text-sm">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Base DN</label>
+                <input type="text" name="base_dn" value="{{ ldap.base_dn or '' }}" placeholder="DC=domain,DC=local"
+                    class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-blue-500 outline-none text-sm">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Bind User</label>
+                <input type="text" name="bind_user" value="{{ ldap.bind_user or '' }}" placeholder="admin@domain.local"
+                    class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-blue-500 outline-none text-sm">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Bind Password</label>
+                <input type="password" name="bind_password" placeholder="Оставьте пустым, чтобы не менять"
+                    class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-blue-500 outline-none text-sm">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">User Filter</label>
+                <input type="text" name="user_filter" value="{{ ldap.user_filter or '(sAMAccountName={username})' }}"
+                    class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-blue-500 outline-none text-sm">
+            </div>
+
+            <div class="p-3 bg-blue-50 rounded-lg">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    <i class="fas fa-filter mr-1 text-blue-500"></i>Группа для синхронизации
+                </label>
+                <input type="text" name="sync_group_dn" value="{{ ldap.sync_group_dn or '' }}"
+                    placeholder="CN=PortalUsers,OU=Groups,DC=domain,DC=local"
+                    class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-blue-500 outline-none text-sm">
+                <p class="text-xs text-gray-500 mt-1">
+                    Если указано - синхронизируются только члены этой группы.
+                </p>
+            </div>
+
+            <h3 class="font-medium text-gray-800 pt-4 border-t">Стандартные атрибуты</h3>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">Имя</label>
+                    <input type="text" name="attr_firstname" value="{{ ldap.attr_firstname or 'givenName' }}"
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">Фамилия</label>
+                    <input type="text" name="attr_lastname" value="{{ ldap.attr_lastname or 'sn' }}"
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">Email</label>
+                    <input type="text" name="attr_email" value="{{ ldap.attr_email or 'mail' }}"
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">Телефон</label>
+                    <input type="text" name="attr_phone" value="{{ ldap.attr_phone or 'telephoneNumber' }}"
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">Отдел</label>
+                    <input type="text" name="attr_department" value="{{ ldap.attr_department or 'department' }}"
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">Должность</label>
+                    <input type="text" name="attr_position" value="{{ ldap.attr_position or 'title' }}"
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">Руководитель</label>
+                    <input type="text" name="attr_manager" value="{{ ldap.attr_manager or 'manager' }}"
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                </div>
+            </div>
+
+            <div class="pt-4">
+                <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">
+                    Сохранить настройки
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Custom Attributes -->
+    <div class="bg-white rounded-2xl shadow-sm p-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-cogs text-purple-500 mr-2"></i>Кастомные атрибуты
+        </h2>
+        <p class="text-sm text-gray-600 mb-4">Дополнительные атрибуты LDAP для синхронизации</p>
+
+        <!-- Add Attribute Form -->
+        <form method="POST" action="{{ url_for('admin.settings_ldap_attributes') }}"
+            class="mb-6 p-4 bg-gray-50 rounded-xl">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="add">
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Атрибут LDAP</label>
+                    <input type="text" name="ldap_attr" required placeholder="physicalDeliveryOfficeName"
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                    <p class="text-xs text-gray-500 mt-1">Например: physicalDeliveryOfficeName, Office, ipPhone</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Поле на портале</label>
+                    <select name="portal_field" required
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                        <option value="location">Местоположение (location)</option>
+                        <option value="internal_phone">Внутренний телефон (internal_phone)</option>
+                        <option value="custom_1">Кастомное поле 1</option>
+                        <option value="custom_2">Кастомное поле 2</option>
+                        <option value="custom_3">Кастомное поле 3</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Название для отображения</label>
+                    <input type="text" name="display_name" placeholder="Офис"
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                </div>
+                <button type="submit" class="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 text-sm">
+                    <i class="fas fa-plus mr-2"></i>Добавить атрибут
+                </button>
+            </div>
+        </form>
+
+        <!-- Attributes List -->
+        <div class="space-y-2">
+            {% for attr in ldap.custom_attributes %}
+            <div
+                class="flex items-center justify-between p-3 bg-gray-50 rounded-lg {{ 'opacity-50' if not attr.is_active }}">
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-gray-800 text-sm">{{ attr.display_name or attr.portal_field }}</p>
+                    <p class="text-xs text-gray-500">{{ attr.ldap_attr }} → {{ attr.portal_field }}</p>
+                </div>
+                <div class="flex items-center space-x-2 ml-4">
+                    <form method="POST" action="{{ url_for('admin.settings_ldap_attributes') }}" class="inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="toggle">
+                        <input type="hidden" name="attr_id" value="{{ attr.id }}">
+                        <button type="submit"
+                            class="text-{{ 'green' if attr.is_active else 'gray' }}-500 hover:text-{{ 'green' if attr.is_active else 'gray' }}-600">
+                            <i class="fas fa-{{ 'check-circle' if attr.is_active else 'circle' }}"></i>
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ url_for('admin.settings_ldap_attributes') }}" class="inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="attr_id" value="{{ attr.id }}">
+                        <button type="submit" class="text-red-500 hover:text-red-600">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center text-gray-500 py-8">
+                <i class="fas fa-cogs text-3xl text-gray-300 mb-2"></i>
+                <p class="text-sm">Кастомные атрибуты не настроены</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Groups -->
+    <div class="bg-white rounded-2xl shadow-sm p-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Группы и роли</h2>
+        <p class="text-sm text-gray-600 mb-4">Привязка групп LDAP к ролям в системе</p>
+
+        <!-- Add Group Form -->
+        <form method="POST" action="{{ url_for('admin.settings_ldap_groups') }}" class="mb-6 p-4 bg-gray-50 rounded-xl">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="add">
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">DN группы</label>
+                    <input type="text" name="group_dn" required placeholder="CN=Admins,OU=Groups,DC=domain,DC=local"
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Название (для отображения)</label>
+                    <input type="text" name="group_name" placeholder="Администраторы"
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Роль в системе</label>
+                    <select name="role_id" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                        {% for role in roles %}
+                        <option value="{{ role.id }}">{{ role.display_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm">
+                    <i class="fas fa-plus mr-2"></i>Добавить группу
+                </button>
+            </div>
+        </form>
+
+        <!-- Groups List -->
+        <div class="space-y-2">
+            {% for group in ldap.groups %}
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-gray-800 text-sm">{{ group.group_name or 'Без названия' }}</p>
+                    <p class="text-xs text-gray-500 truncate">{{ group.group_dn }}</p>
+                </div>
+                <div class="flex items-center space-x-2 ml-4">
+                    <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
+                        {{ group.role.display_name if group.role else 'Нет роли' }}
+                    </span>
+                    <form method="POST" action="{{ url_for('admin.settings_ldap_groups') }}" class="inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="group_id" value="{{ group.id }}">
+                        <button type="submit" class="text-red-500 hover:text-red-600">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center text-gray-500 py-8">
+                <i class="fas fa-users text-3xl text-gray-300 mb-2"></i>
+                <p class="text-sm">Группы не настроены</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

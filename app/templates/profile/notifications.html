@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Уведомления{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Уведомления</h1>
+        <button onclick="markAllRead()" class="px-4 py-2 text-blue-500 hover:bg-blue-50 rounded-xl">
+            Прочитать все
+        </button>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        {% for notification in notifications.items %}
+        <div onclick="openNotificationModal('{{ notification.title|e }}', '{{ notification.message|e if notification.message else '' }}', '{{ notification.icon }}', '{{ notification.type }}', '{{ notification.created_at.strftime('%d.%m.%Y %H:%M') }}', '{{ notification.link or '' }}', {{ notification.id }})"
+            class="flex items-start space-x-4 p-4 border-b hover:bg-gray-50 cursor-pointer {{ 'opacity-60' if notification.is_read else '' }}">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0
+                {% if notification.type == 'error' %}bg-red-100 text-red-600
+                {% elif notification.type == 'success' %}bg-green-100 text-green-600
+                {% elif notification.type == 'warning' %}bg-yellow-100 text-yellow-600
+                {% else %}bg-blue-100 text-blue-600{% endif %}">
+                <i class="fas fa-{{ notification.icon }}"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="font-medium text-gray-800">{{ notification.title }}</p>
+                {% if notification.message %}
+                <p class="text-sm text-gray-600 mt-1 line-clamp-2">{{ notification.message }}</p>
+                {% endif %}
+                <p class="text-xs text-gray-400 mt-2">{{ notification.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
+            </div>
+            <div class="flex items-center space-x-2" onclick="event.stopPropagation()">
+                {% if notification.link %}
+                <a href="{{ notification.link }}" class="text-blue-500 hover:text-blue-600">
+                    <i class="fas fa-external-link-alt"></i>
+                </a>
+                {% endif %}
+                <button onclick="deleteNotification({{ notification.id }}, this)"
+                    class="text-gray-400 hover:text-red-500">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+        {% else %}
+        <div class="p-12 text-center text-gray-500">
+            <i class="fas fa-bell-slash text-4xl text-gray-300 mb-4"></i>
+            <p>Нет уведомлений</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if notifications.pages > 1 %}
+    <div class="mt-6 flex justify-center">
+        <nav class="flex items-center space-x-1">
+            {% for page_num in notifications.iter_pages() %}
+            {% if page_num %}
+            <a href="{{ url_for('profile.notifications', page=page_num) }}"
+                class="px-3 py-1 rounded {% if page_num == notifications.page %}bg-blue-500 text-white{% else %}hover:bg-gray-100{% endif %}">
+                {{ page_num }}
+            </a>
+            {% else %}
+            <span class="px-2">...</span>
+            {% endif %}
+            {% endfor %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Notification Modal -->
+<div id="notification-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeNotificationModal()"></div>
+    <div
+        class="absolute inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div id="modal-header" class="p-4 border-b flex items-center space-x-4">
+            <div id="modal-icon" class="w-12 h-12 rounded-full flex items-center justify-center shrink-0">
+                <i id="modal-icon-i" class="fas fa-bell text-xl"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <h3 id="modal-title" class="text-lg font-semibold text-gray-800"></h3>
+                <p id="modal-date" class="text-sm text-gray-400"></p>
+            </div>
+            <button onclick="closeNotificationModal()"
+                class="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6">
+            <p id="modal-message" class="text-gray-700 whitespace-pre-wrap"></p>
+        </div>
+        <div id="modal-footer" class="p-4 border-t flex items-center justify-end space-x-3">
+            <button onclick="closeNotificationModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+                Закрыть
+            </button>
+            <a id="modal-link" href="#" class="hidden px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                <i class="fas fa-external-link-alt mr-2"></i>Перейти
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    function markAllRead() {
+        fetch('{{ url_for("profile.notifications_read_all") }}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
+        }).then(() => location.reload());
+    }
+
+    function deleteNotification(id, btn) {
+        fetch(`/profile/notifications/${id}/delete`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
+        }).then(() => btn.closest('.flex').remove());
+    }
+
+    function openNotificationModal(title, message, icon, type, date, link, id) {
+        const modal = document.getElementById('notification-modal');
+        const modalIcon = document.getElementById('modal-icon');
+        const modalIconI = document.getElementById('modal-icon-i');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalDate = document.getElementById('modal-date');
+        const modalLink = document.getElementById('modal-link');
+
+        // Set icon colors based on type
+        modalIcon.className = 'w-12 h-12 rounded-full flex items-center justify-center shrink-0';
+        if (type === 'error') {
+            modalIcon.classList.add('bg-red-100', 'text-red-600');
+        } else if (type === 'success') {
+            modalIcon.classList.add('bg-green-100', 'text-green-600');
+        } else if (type === 'warning') {
+            modalIcon.classList.add('bg-yellow-100', 'text-yellow-600');
+        } else {
+            modalIcon.classList.add('bg-blue-100', 'text-blue-600');
+        }
+
+        modalIconI.className = 'fas fa-' + icon + ' text-xl';
+        modalTitle.textContent = title;
+        modalMessage.textContent = message || 'Нет дополнительного текста';
+        modalDate.textContent = date;
+
+        if (link) {
+            modalLink.href = link;
+            modalLink.classList.remove('hidden');
+        } else {
+            modalLink.classList.add('hidden');
+        }
+
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+
+        // Mark as read
+        if (id) {
+            fetch(`/profile/notifications/${id}/read`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
+            });
+        }
+    }
+
+    function closeNotificationModal() {
+        const modal = document.getElementById('notification-modal');
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    // Close on Escape key
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            closeNotificationModal();
+        }
+    });
+</script>
+{% endblock %}

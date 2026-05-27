@@ -1,0 +1,205 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Рекомендация: {{ referral.candidate_name }} | Админ-панель{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('admin.referrals') }}" class="text-blue-500 hover:text-blue-600">
+        <i class="fas fa-arrow-left mr-2"></i>Назад к списку
+    </a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Info -->
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Candidate Card -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+            <div class="flex items-start justify-between mb-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">{{ referral.candidate_name }}</h1>
+                    <p class="text-gray-500">Кандидат на вакансию</p>
+                </div>
+                <span
+                    class="px-3 py-1 text-sm rounded-full bg-{{ referral.status_color }}-100 text-{{ referral.status_color }}-700">
+                    {{ referral.status_display }}
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {% if referral.candidate_email %}
+                <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-xl">
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-envelope text-blue-500"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Email</p>
+                        <a href="mailto:{{ referral.candidate_email }}"
+                            class="font-medium text-blue-600 hover:underline">
+                            {{ referral.candidate_email }}
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if referral.candidate_phone %}
+                <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-xl">
+                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-phone text-green-500"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Телефон</p>
+                        <a href="tel:{{ referral.candidate_phone }}" class="font-medium text-green-600 hover:underline">
+                            {{ referral.candidate_phone }}
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if referral.comment %}
+            <div class="mb-6">
+                <h3 class="font-semibold text-gray-800 mb-2">Комментарий от рекомендателя</h3>
+                <p class="text-gray-700 bg-gray-50 rounded-xl p-4">{{ referral.comment }}</p>
+            </div>
+            {% endif %}
+
+            <!-- Resume -->
+            {% if referral.resume_file %}
+            <div class="border-t pt-6">
+                <h3 class="font-semibold text-gray-800 mb-3">Резюме</h3>
+                <a href="{{ url_for('admin.referral_download', id=referral.id) }}"
+                    class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all">
+                    <i class="fas fa-download mr-2"></i>
+                    Скачать {{ referral.resume_filename }}
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Status Change -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+            <h3 class="font-semibold text-gray-800 mb-4">Изменить статус</h3>
+
+            <form method="POST" action="{{ url_for('admin.referral_status', id=referral.id) }}" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="flex flex-wrap gap-2">
+                    <button type="submit" name="status" value="reviewed"
+                        class="px-4 py-2 rounded-xl {{ 'bg-yellow-500 text-white' if referral.status == 'reviewed' else 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' }}">
+                        <i class="fas fa-eye mr-1"></i>Просмотрено
+                    </button>
+                    <button type="submit" name="status" value="contacted"
+                        class="px-4 py-2 rounded-xl {{ 'bg-purple-500 text-white' if referral.status == 'contacted' else 'bg-purple-100 text-purple-700 hover:bg-purple-200' }}">
+                        <i class="fas fa-phone mr-1"></i>Связались
+                    </button>
+                    <button type="submit" name="status" value="hired"
+                        class="px-4 py-2 rounded-xl {{ 'bg-green-500 text-white' if referral.status == 'hired' else 'bg-green-100 text-green-700 hover:bg-green-200' }}">
+                        <i class="fas fa-check mr-1"></i>Принят
+                    </button>
+                    <button type="submit" name="status" value="rejected"
+                        class="px-4 py-2 rounded-xl {{ 'bg-red-500 text-white' if referral.status == 'rejected' else 'bg-red-100 text-red-700 hover:bg-red-200' }}">
+                        <i class="fas fa-times mr-1"></i>Отклонён
+                    </button>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Комментарий HR</label>
+                    <textarea name="hr_comment" rows="3" placeholder="Добавьте комментарий..."
+                        class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">{{ referral.hr_comment or '' }}</textarea>
+                </div>
+            </form>
+
+            {% if referral.hr_comment %}
+            <div class="mt-4 p-4 bg-blue-50 rounded-xl">
+                <p class="text-sm text-gray-500 mb-1">Комментарий HR:</p>
+                <p class="text-gray-700">{{ referral.hr_comment }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="space-y-6">
+        <!-- Vacancy Info -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+            <h3 class="font-semibold text-gray-800 mb-4">
+                <i class="fas fa-briefcase text-blue-500 mr-2"></i>Вакансия
+            </h3>
+            {% if referral.vacancy %}
+            <div class="p-4 bg-gray-50 rounded-xl">
+                <p class="font-medium text-gray-800">{{ referral.vacancy.title }}</p>
+                {% if referral.vacancy.department %}
+                <p class="text-sm text-gray-500 mt-1">{{ referral.vacancy.department }}</p>
+                {% endif %}
+                <a href="{{ url_for('vacancies.detail', id=referral.vacancy.id) }}"
+                    class="inline-block mt-3 text-sm text-blue-600 hover:underline">
+                    Открыть вакансию →
+                </a>
+            </div>
+            {% else %}
+            <p class="text-gray-500">Вакансия удалена</p>
+            {% endif %}
+        </div>
+
+        <!-- Referrer Info -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+            <h3 class="font-semibold text-gray-800 mb-4">
+                <i class="fas fa-user-friends text-green-500 mr-2"></i>Рекомендовал
+            </h3>
+            {% if referral.referrer %}
+            <a href="{{ url_for('staff.detail', id=referral.referrer.id) }}"
+                class="flex items-center space-x-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                <img src="{{ url_for('static', filename=referral.referrer.photo|user_photo) }}"
+                    class="w-12 h-12 rounded-full object-cover">
+                <div>
+                    <p class="font-medium text-gray-800">{{ referral.referrer.full_name }}</p>
+                    <p class="text-sm text-gray-500">{{ referral.referrer.position }}</p>
+                </div>
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- Timeline -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+            <h3 class="font-semibold text-gray-800 mb-4">
+                <i class="fas fa-history text-purple-500 mr-2"></i>История
+            </h3>
+            <div class="space-y-3">
+                <div class="flex items-start space-x-3">
+                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-plus text-blue-500 text-xs"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-800">Создана рекомендация</p>
+                        <p class="text-xs text-gray-500">{{ referral.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
+                    </div>
+                </div>
+                {% if referral.reviewed_at %}
+                <div class="flex items-start space-x-3">
+                    <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-eye text-yellow-500 text-xs"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-800">Просмотрено</p>
+                        <p class="text-xs text-gray-500">
+                            {{ referral.reviewed_at.strftime('%d.%m.%Y %H:%M') }}
+                            {% if referral.reviewed_by %}
+                            · {{ referral.reviewed_by.short_name }}
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Consent -->
+        <div class="bg-green-50 rounded-2xl p-4">
+            <div class="flex items-center space-x-2 text-green-700">
+                <i class="fas fa-check-circle"></i>
+                <span class="text-sm font-medium">Согласие кандидата получено</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,449 @@
+{% extends "base.html" %}
+
+{% block title %}Настройки диаграммы | {{ diagram.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .user-search-container {
+        position: relative;
+    }
+
+    .user-search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        max-height: 300px;
+        overflow-y: auto;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        z-index: 50;
+        display: none;
+    }
+
+    .user-search-results.active {
+        display: block;
+    }
+
+    .user-search-item {
+        padding: 10px 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        transition: background 0.15s;
+    }
+
+    .user-search-item:hover {
+        background: #f3f4f6;
+    }
+
+    .user-search-item.selected {
+        background: #eff6ff;
+    }
+
+    .user-search-item img {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .selected-users-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+        min-height: 40px;
+    }
+
+    .selected-user-tag {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 20px;
+        font-size: 14px;
+    }
+
+    .selected-user-tag img {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .selected-user-tag .remove-btn {
+        cursor: pointer;
+        color: #6b7280;
+        transition: color 0.15s;
+    }
+
+    .selected-user-tag .remove-btn:hover {
+        color: #ef4444;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 max-w-2xl">
+    <div class="mb-6">
+        <a href="{{ url_for('diagrams.edit', id=diagram.id) }}" class="text-blue-500 hover:text-blue-600">
+            <i class="fas fa-arrow-left mr-2"></i>Назад к редактированию
+        </a>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">Настройки диаграммы</h1>
+
+        <form method="POST" class="space-y-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Название</label>
+                <input type="text" name="title" value="{{ diagram.title }}"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Описание</label>
+                <textarea name="description" rows="3"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none resize-none">{{ diagram.description or '' }}</textarea>
+            </div>
+
+            <div class="flex items-center">
+                <input type="checkbox" name="is_public" id="is_public" {{ 'checked' if diagram.is_public else '' }}
+                    class="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500">
+                <label for="is_public" class="ml-2 text-sm text-gray-700">Публичная диаграмма (видна всем
+                    пользователям)</label>
+            </div>
+
+            <div class="flex justify-end">
+                <button type="submit" class="px-6 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">
+                    Сохранить настройки
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Управление доступом -->
+    <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">
+            <i class="fas fa-share-alt text-purple-500 mr-2"></i>Доступ к диаграмме
+        </h2>
+
+        <!-- Добавление пользователей -->
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Добавить пользователей</label>
+
+            <!-- Выбранные пользователи -->
+            <div class="selected-users-container" id="selectedUsersContainer">
+                <span class="text-gray-400 text-sm" id="noUsersPlaceholder">Выберите пользователей из списка ниже</span>
+            </div>
+
+            <!-- Поиск -->
+            <div class="user-search-container">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" id="userSearchInput" placeholder="Поиск по имени, должности или отделу..."
+                        class="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 outline-none"
+                        autocomplete="off">
+                </div>
+                <div class="user-search-results" id="userSearchResults"></div>
+            </div>
+
+            <!-- Права и кнопка -->
+            <div class="flex items-center justify-between mt-4">
+                <div class="flex items-center space-x-4">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="sharePermission" value="view" checked class="mr-2">
+                        <i class="fas fa-eye text-gray-500 mr-1"></i>
+                        <span class="text-sm">Только просмотр</span>
+                    </label>
+                    <label class="flex items-center cursor-pointer">
+                        <input type="radio" name="sharePermission" value="edit" class="mr-2">
+                        <i class="fas fa-edit text-green-500 mr-1"></i>
+                        <span class="text-sm">Редактирование</span>
+                    </label>
+                </div>
+                <button onclick="addSelectedUsers()" id="addUsersBtn" disabled
+                    class="px-4 py-2 bg-purple-500 text-white rounded-xl hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fas fa-plus mr-2"></i>Добавить <span id="selectedCount"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Список пользователей с доступом -->
+        <div id="sharedUsersList">
+            {% if shared_users %}
+            <h3 class="text-sm font-medium text-gray-700 mb-3">Пользователи с доступом</h3>
+            <div class="space-y-2" id="sharedUsersListInner">
+                {% for share in shared_users %}
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl"
+                    data-user-id="{{ share.user.id }}">
+                    <div class="flex items-center space-x-3">
+                        <img src="{{ url_for('static', filename=share.user.photo|user_photo) }}"
+                            class="w-10 h-10 rounded-full object-cover">
+                        <div>
+                            <p class="font-medium text-gray-800">{{ share.user.full_name }}</p>
+                            <p class="text-sm text-gray-500">{{ share.user.position or share.user.email }}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <span
+                            class="px-3 py-1 {% if share.can_edit %}bg-green-100 text-green-700{% else %}bg-gray-100 text-gray-600{% endif %} rounded-full text-sm">
+                            <i class="fas {% if share.can_edit %}fa-edit{% else %}fa-eye{% endif %} mr-1"></i>
+                            {% if share.can_edit %}Редактирование{% else %}Просмотр{% endif %}
+                        </span>
+                        <button onclick="removeShare({{ share.user.id }})"
+                            class="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-500 text-center py-4" id="noSharesMessage">Диаграмма пока никому не доступна</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Опасная зона -->
+    <div class="bg-white rounded-2xl shadow-sm p-6 border-2 border-red-100">
+        <h2 class="text-xl font-bold text-red-600 mb-4">
+            <i class="fas fa-exclamation-triangle mr-2"></i>Опасная зона
+        </h2>
+        <p class="text-gray-600 mb-4">Удаление диаграммы необратимо. Все данные будут потеряны.</p>
+        <form action="{{ url_for('diagrams.delete', id=diagram.id) }}" method="POST"
+            onsubmit="return confirm('Вы уверены, что хотите удалить эту диаграмму? Это действие необратимо.')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600">
+                <i class="fas fa-trash mr-2"></i>Удалить диаграмму
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Данные для JavaScript -->
+<div id="pageData" data-diagram-id="{{ diagram.id }}" data-csrf="{{ csrf_token() }}" data-users="{{ users_json }}"
+    data-shared="{{ shared_ids_json }}" style="display:none;"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Получаем данные из data-атрибутов
+    const pageData = document.getElementById('pageData');
+    const diagramId = parseInt(pageData.dataset.diagramId);
+    const csrfToken = pageData.dataset.csrf;
+    const allUsers = JSON.parse(pageData.dataset.users);
+    const alreadyShared = new Set(JSON.parse(pageData.dataset.shared));
+
+    // Выбранные для добавления
+    let selectedUsers = new Map();
+
+    const searchInput = document.getElementById('userSearchInput');
+    const searchResults = document.getElementById('userSearchResults');
+    const selectedContainer = document.getElementById('selectedUsersContainer');
+    const addBtn = document.getElementById('addUsersBtn');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    const noUsersPlaceholder = document.getElementById('noUsersPlaceholder');
+
+    // Поиск пользователей
+    searchInput.addEventListener('input', function () {
+        const query = this.value.toLowerCase().trim();
+
+        if (query.length < 1) {
+            searchResults.classList.remove('active');
+            return;
+        }
+
+        const filtered = allUsers.filter(u => {
+            if (alreadyShared.has(u.id) || selectedUsers.has(u.id)) return false;
+            return u.name.toLowerCase().includes(query) ||
+                u.position.toLowerCase().includes(query) ||
+                u.department.toLowerCase().includes(query);
+        });
+
+        if (filtered.length === 0) {
+            searchResults.innerHTML = '<div class="p-4 text-gray-500 text-center">Пользователи не найдены</div>';
+        } else {
+            searchResults.innerHTML = filtered.slice(0, 10).map(u => `
+                <div class="user-search-item" onclick="selectUser(${u.id})">
+                    <img src="${u.photo}" alt="">
+                    <div>
+                        <div class="font-medium text-gray-800">${u.name}</div>
+                        <div class="text-sm text-gray-500">${u.position || u.department || 'Сотрудник'}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        searchResults.classList.add('active');
+    });
+
+    // Закрытие при клике вне
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('.user-search-container')) {
+            searchResults.classList.remove('active');
+        }
+    });
+
+    // Выбор пользователя
+    function selectUser(userId) {
+        const user = allUsers.find(u => u.id === userId);
+        if (!user || selectedUsers.has(userId)) return;
+
+        selectedUsers.set(userId, user);
+        updateSelectedUI();
+        searchInput.value = '';
+        searchResults.classList.remove('active');
+    }
+
+    // Удаление из выбранных
+    function deselectUser(userId) {
+        selectedUsers.delete(userId);
+        updateSelectedUI();
+    }
+
+    // Обновление UI выбранных
+    function updateSelectedUI() {
+        if (selectedUsers.size === 0) {
+            noUsersPlaceholder.style.display = 'block';
+            selectedContainer.innerHTML = '';
+            selectedContainer.appendChild(noUsersPlaceholder);
+            addBtn.disabled = true;
+            selectedCountSpan.textContent = '';
+        } else {
+            noUsersPlaceholder.style.display = 'none';
+            selectedContainer.innerHTML = Array.from(selectedUsers.values()).map(u => `
+                <div class="selected-user-tag">
+                    <img src="${u.photo}" alt="">
+                    <span>${u.name}</span>
+                    <span class="remove-btn" onclick="deselectUser(${u.id})"><i class="fas fa-times"></i></span>
+                </div>
+            `).join('');
+            addBtn.disabled = false;
+            selectedCountSpan.textContent = `(${selectedUsers.size})`;
+        }
+    }
+
+    // Добавление выбранных пользователей
+    async function addSelectedUsers() {
+        if (selectedUsers.size === 0) return;
+
+        const canEdit = document.querySelector('input[name="sharePermission"]:checked').value === 'edit';
+        const userIds = Array.from(selectedUsers.keys());
+
+        addBtn.disabled = true;
+        addBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Добавление...';
+
+        let successCount = 0;
+
+        for (const userId of userIds) {
+            try {
+                const response = await fetch(`/diagrams/${diagramId}/share`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ user_id: userId, can_edit: canEdit })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    successCount++;
+                    alreadyShared.add(userId);
+                    addUserToList(selectedUsers.get(userId), canEdit);
+                }
+            } catch (e) {
+                console.error('Error adding user:', e);
+            }
+        }
+
+        selectedUsers.clear();
+        updateSelectedUI();
+
+        addBtn.innerHTML = '<i class="fas fa-plus mr-2"></i>Добавить <span id="selectedCount"></span>';
+
+        if (successCount > 0) {
+            showNotification(`Добавлено пользователей: ${successCount}`);
+        }
+    }
+
+    // Добавление пользователя в список
+    function addUserToList(user, canEdit) {
+        const noMsg = document.getElementById('noSharesMessage');
+        if (noMsg) noMsg.remove();
+
+        let listInner = document.getElementById('sharedUsersListInner');
+        if (!listInner) {
+            const listDiv = document.getElementById('sharedUsersList');
+            listDiv.innerHTML = '<h3 class="text-sm font-medium text-gray-700 mb-3">Пользователи с доступом</h3><div class="space-y-2" id="sharedUsersListInner"></div>';
+            listInner = document.getElementById('sharedUsersListInner');
+        }
+
+        const permClass = canEdit ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600';
+        const permIcon = canEdit ? 'fa-edit' : 'fa-eye';
+        const permText = canEdit ? 'Редактирование' : 'Просмотр';
+
+        const html = `
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl" data-user-id="${user.id}">
+                <div class="flex items-center space-x-3">
+                    <img src="${user.photo}" class="w-10 h-10 rounded-full object-cover">
+                    <div>
+                        <p class="font-medium text-gray-800">${user.name}</p>
+                        <p class="text-sm text-gray-500">${user.position || 'Сотрудник'}</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <span class="px-3 py-1 ${permClass} rounded-full text-sm">
+                        <i class="fas ${permIcon} mr-1"></i>${permText}
+                    </span>
+                    <button onclick="removeShare(${user.id})" class="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        listInner.insertAdjacentHTML('beforeend', html);
+    }
+
+    // Удаление доступа
+    function removeShare(userId) {
+        if (!confirm('Удалить доступ для этого пользователя?')) return;
+
+        fetch(`/diagrams/${diagramId}/unshare`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ user_id: userId })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const el = document.querySelector(`[data-user-id="${userId}"]`);
+                    if (el) el.remove();
+                    alreadyShared.delete(userId);
+                }
+            });
+    }
+
+    // Уведомление
+    function showNotification(message) {
+        const notif = document.createElement('div');
+        notif.className = 'fixed bottom-4 right-4 px-6 py-3 bg-green-500 text-white rounded-xl shadow-lg z-50';
+        notif.innerHTML = `<i class="fas fa-check mr-2"></i>${message}`;
+        document.body.appendChild(notif);
+        setTimeout(() => notif.remove(), 3000);
+    }
+</script>
+{% endblock %}

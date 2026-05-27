@@ -1,0 +1,360 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ 'Редактировать' if test else 'Создать' }} тест - Панель управления{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">{{ 'Редактировать тест' if test else 'Новый тест' }}</h1>
+        </div>
+        <a href="{{ url_for('admin.tests') }}" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">
+            <i class="fas fa-arrow-left mr-2"></i>Назад
+        </a>
+    </div>
+
+    <form method="POST" class="space-y-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Основная информация -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Основная информация</h2>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Название теста *</label>
+                    <input type="text" name="title" value="{{ test.title if test else '' }}" required
+                        class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Описание</label>
+                    <textarea name="description" rows="3"
+                        class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500">{{ test.description if test else '' }}</textarea>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Категория</label>
+                        <select name="category" class="w-full px-4 py-2 border rounded-xl">
+                            <option value="general" {{ 'selected' if not test or test.category=='general' else '' }}>
+                                Общий тест
+                            </option>
+                            <option value="security" {{ 'selected' if test and test.category=='security' else '' }}>
+                                Информационная безопасность
+                            </option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Минимальный % для
+                            прохождения</label>
+                        <input type="number" name="passing_score" min="1" max="100"
+                            value="{{ test.passing_score if test else 60 }}" class="w-full px-4 py-2 border rounded-xl">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Лимит времени (минуты)</label>
+                    <input type="number" name="time_limit" min="1" placeholder="Без ограничения"
+                        value="{{ test.time_limit if test and test.time_limit else '' }}"
+                        class="w-full px-4 py-2 border rounded-xl">
+                </div>
+            </div>
+        </div>
+
+        <!-- Настройки -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Настройки</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <label class="flex items-center space-x-3 p-3 border rounded-xl hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" name="is_active" {{ 'checked' if not test or test.is_active else '' }}
+                        class="w-5 h-5 text-blue-500 rounded">
+                    <div>
+                        <span class="font-medium">Активен</span>
+                        <p class="text-sm text-gray-500">Тест доступен для прохождения</p>
+                    </div>
+                </label>
+
+                <label class="flex items-center space-x-3 p-3 border rounded-xl hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" name="allow_retake" {{ 'checked' if not test or test.allow_retake else '' }}
+                        class="w-5 h-5 text-green-500 rounded">
+                    <div>
+                        <span class="font-medium">Разрешить пересдачу</span>
+                        <p class="text-sm text-gray-500">Можно проходить несколько раз</p>
+                    </div>
+                </label>
+
+                <label class="flex items-center space-x-3 p-3 border rounded-xl hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" name="show_correct_answers" {{ 'checked' if not test or
+                        test.show_correct_answers else '' }} class="w-5 h-5 text-purple-500 rounded">
+                    <div>
+                        <span class="font-medium">Показывать ответы</span>
+                        <p class="text-sm text-gray-500">Показать правильные ответы после</p>
+                    </div>
+                </label>
+
+                <label class="flex items-center space-x-3 p-3 border rounded-xl hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" name="shuffle_questions" {{ 'checked' if test and test.shuffle_questions
+                        else '' }} class="w-5 h-5 text-orange-500 rounded">
+                    <div>
+                        <span class="font-medium">Перемешивать вопросы</span>
+                        <p class="text-sm text-gray-500">Случайный порядок вопросов</p>
+                    </div>
+                </label>
+
+                <label class="flex items-center space-x-3 p-3 border rounded-xl hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" name="shuffle_options" {{ 'checked' if test and test.shuffle_options else ''
+                        }} class="w-5 h-5 text-teal-500 rounded">
+                    <div>
+                        <span class="font-medium">Перемешивать варианты</span>
+                        <p class="text-sm text-gray-500">Случайный порядок ответов</p>
+                    </div>
+                </label>
+
+                <label class="flex items-center space-x-3 p-3 border rounded-xl hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" name="is_mandatory" {{ 'checked' if test and test.is_mandatory else '' }}
+                        class="w-5 h-5 text-red-500 rounded">
+                    <div>
+                        <span class="font-medium">Обязательный</span>
+                        <p class="text-sm text-gray-500">Обязательный для прохождения</p>
+                    </div>
+                </label>
+            </div>
+
+            <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Срок прохождения (для обязательных)</label>
+                <input type="datetime-local" name="deadline"
+                    value="{{ test.deadline.strftime('%Y-%m-%dT%H:%M') if test and test.deadline else '' }}"
+                    class="w-full px-4 py-2 border rounded-xl">
+            </div>
+        </div>
+
+        <!-- Ограничение по отделам -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Доступ по отделам</h2>
+            <p class="text-sm text-gray-500 mb-4">Оставьте пустым для доступа всем</p>
+
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto">
+                {% set selected_deps = test.get_departments() if test else [] %}
+                {% for dept in departments %}
+                <label class="flex items-center space-x-2 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" name="departments" value="{{ dept }}" {{ 'checked' if dept in selected_deps
+                        else '' }} class="w-4 h-4 text-blue-500 rounded">
+                    <span class="text-sm truncate">{{ dept }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        {% if test %}
+        <!-- Вопросы (для существующего теста) -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">
+                Вопросы
+                <span class="text-sm font-normal text-gray-500">({{ test.questions.count() }} вопросов, {{
+                    test.get_total_points() }} баллов)</span>
+            </h2>
+
+            <div class="space-y-4 mb-6">
+                {% for question in test.questions %}
+                <div class="p-4 border rounded-xl">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-2">
+                                <span class="px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-600">
+                                    {{ question.points }} {{ 'балл' if question.points == 1 else 'баллов' }}
+                                </span>
+                                <span class="px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-600">
+                                    {% if question.question_type == 'single' %}Один ответ{% else %}Несколько ответов{%
+                                    endif %}
+                                </span>
+                            </div>
+                            <p class="font-medium">{{ question.text }}</p>
+                            <ul class="mt-2 space-y-1">
+                                {% for option in question.options %}
+                                <li class="text-sm flex items-center space-x-2">
+                                    {% if option.is_correct %}
+                                    <i class="fas fa-check text-green-500"></i>
+                                    {% else %}
+                                    <i class="fas fa-times text-gray-300"></i>
+                                    {% endif %}
+                                    <span
+                                        class="{{ 'text-green-600 font-medium' if option.is_correct else 'text-gray-600' }}">
+                                        {{ option.text }}
+                                    </span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% if question.explanation %}
+                            <p class="mt-2 text-sm text-gray-500 italic">💡 {{ question.explanation }}</p>
+                            {% endif %}
+                        </div>
+                        <form action="{{ url_for('admin.test_delete_question', id=question.id) }}" method="POST"
+                            onsubmit="return confirm('Удалить вопрос?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-gray-500 text-center py-4">Вопросов пока нет</p>
+                {% endfor %}
+            </div>
+
+            <!-- Добавить вопрос -->
+            <div class="border-t pt-4">
+                <h3 class="font-medium mb-3">Добавить вопрос</h3>
+                <form action="{{ url_for('admin.test_add_question', id=test.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="space-y-3">
+                        <input type="text" name="text" required placeholder="Текст вопроса"
+                            class="w-full px-4 py-2 border rounded-xl">
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <select name="question_type" class="px-4 py-2 border rounded-xl">
+                                <option value="single">Один ответ</option>
+                                <option value="multiple">Несколько ответов</option>
+                            </select>
+                            <input type="number" name="points" value="1" min="1" placeholder="Баллы"
+                                class="px-4 py-2 border rounded-xl">
+                        </div>
+
+                        <input type="text" name="explanation" placeholder="Пояснение (необязательно)"
+                            class="w-full px-4 py-2 border rounded-xl">
+
+                        <div id="options-container" class="space-y-2">
+                            <div class="flex items-center space-x-2">
+                                <input type="checkbox" name="correct[]" value="0"
+                                    class="w-5 h-5 text-green-500 rounded">
+                                <input type="text" name="options[]" placeholder="Вариант 1"
+                                    class="flex-1 px-4 py-2 border rounded-xl">
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <input type="checkbox" name="correct[]" value="1"
+                                    class="w-5 h-5 text-green-500 rounded">
+                                <input type="text" name="options[]" placeholder="Вариант 2"
+                                    class="flex-1 px-4 py-2 border rounded-xl">
+                            </div>
+                        </div>
+
+                        <button type="button" onclick="addOption()" class="text-sm text-blue-500 hover:underline">
+                            <i class="fas fa-plus mr-1"></i>Добавить вариант
+                        </button>
+
+                        <button type="submit"
+                            class="w-full px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600">
+                            <i class="fas fa-plus mr-2"></i>Добавить вопрос
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <!-- Вопросы (для нового теста) -->
+        <div class="bg-white rounded-2xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Вопросы</h2>
+
+            <div id="questions-container" class="space-y-4"></div>
+
+            <button type="button" onclick="addQuestion()"
+                class="mt-4 w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-blue-500 hover:text-blue-500">
+                <i class="fas fa-plus mr-2"></i>Добавить вопрос
+            </button>
+        </div>
+        {% endif %}
+
+        <div class="flex justify-end space-x-3">
+            <a href="{{ url_for('admin.tests') }}"
+                class="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-xl">Отмена</a>
+            <button type="submit" class="px-6 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">
+                <i class="fas fa-save mr-2"></i>{{ 'Сохранить' if test else 'Создать тест' }}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    let questionIndex = 0;
+    let optionIndex = 2;
+
+    function addQuestion() {
+        const container = document.getElementById('questions-container');
+        const html = `
+        <div class="question-block p-4 border rounded-xl" data-index="${questionIndex}">
+            <div class="flex items-start justify-between mb-3">
+                <span class="text-sm font-medium text-gray-500">Вопрос ${questionIndex + 1}</span>
+                <button type="button" onclick="removeQuestion(this)" class="text-red-500 hover:text-red-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <input type="text" name="question_text[]" required placeholder="Текст вопроса"
+                   class="w-full px-4 py-2 border rounded-xl mb-3">
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <select name="question_type[]" class="px-4 py-2 border rounded-xl">
+                    <option value="single">Один ответ</option>
+                    <option value="multiple">Несколько ответов</option>
+                </select>
+                <input type="number" name="question_points[]" value="1" min="1" placeholder="Баллы"
+                       class="px-4 py-2 border rounded-xl">
+            </div>
+            <input type="text" name="question_explanation[]" placeholder="Пояснение (необязательно)"
+                   class="w-full px-4 py-2 border rounded-xl mb-3">
+            <div class="options-list space-y-2">
+                <div class="flex items-center space-x-2">
+                    <input type="checkbox" name="correct_${questionIndex}[]" value="0" class="w-5 h-5 text-green-500 rounded">
+                    <input type="text" name="options_${questionIndex}[]" placeholder="Вариант 1" class="flex-1 px-4 py-2 border rounded-xl">
+                </div>
+                <div class="flex items-center space-x-2">
+                    <input type="checkbox" name="correct_${questionIndex}[]" value="1" class="w-5 h-5 text-green-500 rounded">
+                    <input type="text" name="options_${questionIndex}[]" placeholder="Вариант 2" class="flex-1 px-4 py-2 border rounded-xl">
+                </div>
+            </div>
+            <button type="button" onclick="addQuestionOption(this, ${questionIndex})" class="mt-2 text-sm text-blue-500 hover:underline">
+                <i class="fas fa-plus mr-1"></i>Добавить вариант
+            </button>
+        </div>
+    `;
+        container.insertAdjacentHTML('beforeend', html);
+        questionIndex++;
+    }
+
+    function removeQuestion(btn) {
+        btn.closest('.question-block').remove();
+    }
+
+    function addQuestionOption(btn, qIndex) {
+        const block = btn.closest('.question-block');
+        const optionsList = block.querySelector('.options-list');
+        const count = optionsList.querySelectorAll('.flex').length;
+
+        const div = document.createElement('div');
+        div.className = 'flex items-center space-x-2';
+        div.innerHTML = `
+        <input type="checkbox" name="correct_${qIndex}[]" value="${count}" class="w-5 h-5 text-green-500 rounded">
+        <input type="text" name="options_${qIndex}[]" placeholder="Вариант ${count + 1}" class="flex-1 px-4 py-2 border rounded-xl">
+    `;
+        optionsList.appendChild(div);
+    }
+
+    function addOption() {
+        const container = document.getElementById('options-container');
+        const count = container.querySelectorAll('.flex').length;
+
+        const div = document.createElement('div');
+        div.className = 'flex items-center space-x-2';
+        div.innerHTML = `
+        <input type="checkbox" name="correct[]" value="${count}" class="w-5 h-5 text-green-500 rounded">
+        <input type="text" name="options[]" placeholder="Вариант ${count + 1}" class="flex-1 px-4 py-2 border rounded-xl">
+    `;
+        container.appendChild(div);
+    }
+
+    {% if not test %}
+    addQuestion();
+    {% endif %}
+</script>
+{% endblock %}

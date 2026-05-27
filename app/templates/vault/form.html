@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Редактирование' if vault else 'Новый' }} пароль{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <a href="{{ url_for('vault.index') }}" class="text-blue-500 hover:text-blue-600 mb-4 inline-block">
+        <i class="fas fa-arrow-left mr-2"></i>Назад
+    </a>
+
+    <div class="bg-white rounded-2xl shadow-sm p-6">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">
+            {{ 'Редактирование пароля' if vault else 'Новый пароль' }}
+        </h1>
+
+        <form method="POST" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Название *</label>
+                <input type="text" name="title" value="{{ vault.title if vault else '' }}" required
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Сервис</label>
+                <input type="text" name="service_name" value="{{ vault.service_name if vault else '' }}"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">URL</label>
+                <input type="url" name="url" value="{{ vault.url if vault else '' }}"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Логин</label>
+                <input type="text" name="username" value="{{ vault.username if vault else '' }}"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Пароль {{ '*' if not vault else '(оставьте пустым, чтобы не менять)' }}
+                </label>
+                <div class="relative">
+                    <input type="password" name="password" id="password" {{ 'required' if not vault else '' }}
+                        class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none pr-10">
+                    <button type="button" onclick="togglePassword()"
+                        class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-eye" id="toggleIcon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Категория</label>
+                <input type="text" name="category" value="{{ vault.category if vault else '' }}"
+                    placeholder="Например: Работа, Личное, Банки"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Заметки</label>
+                <textarea name="notes" rows="3"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none resize-none">{{ vault.notes if vault else '' }}</textarea>
+            </div>
+
+            <div class="flex items-center">
+                <input type="checkbox" name="is_shared" id="is_shared" {{ 'checked' if vault and vault.is_shared else ''
+                    }} class="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500">
+                <label for="is_shared" class="ml-2 text-sm text-gray-700">Разрешить предоставление доступа</label>
+            </div>
+
+            <div class="flex justify-end space-x-4 pt-4 border-t">
+                <a href="{{ url_for('vault.index') }}"
+                    class="px-6 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
+                    Отмена
+                </a>
+                <button type="submit"
+                    class="px-6 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors">
+                    {{ 'Сохранить' if vault else 'Создать' }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function togglePassword() {
+        const input = document.getElementById('password');
+        const icon = document.getElementById('toggleIcon');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,146 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Тесты - Панель управления{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">Тесты</h1>
+        <p class="text-gray-500">Создание и управление тестами</p>
+    </div>
+    <a href="{{ url_for('admin.test_create') }}" class="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">
+        <i class="fas fa-plus mr-2"></i>Создать тест
+    </a>
+</div>
+
+<!-- Статистика -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl p-4 shadow-sm">
+        <div class="text-2xl font-bold text-gray-800">{{ stats.total }}</div>
+        <div class="text-sm text-gray-500">Всего тестов</div>
+    </div>
+    <div class="bg-white rounded-xl p-4 shadow-sm">
+        <div class="text-2xl font-bold text-green-600">{{ stats.active }}</div>
+        <div class="text-sm text-gray-500">Активных</div>
+    </div>
+    <div class="bg-white rounded-xl p-4 shadow-sm">
+        <div class="text-2xl font-bold text-red-600">{{ stats.security }}</div>
+        <div class="text-sm text-gray-500">По ИБ</div>
+    </div>
+</div>
+
+<!-- Фильтры -->
+<div class="bg-white rounded-xl p-4 shadow-sm mb-6">
+    <div class="flex items-center space-x-2">
+        <a href="{{ url_for('admin.tests') }}"
+            class="px-4 py-2 rounded-lg {% if not current_category %}bg-blue-500 text-white{% else %}hover:bg-gray-100{% endif %}">
+            Все
+        </a>
+        <a href="{{ url_for('admin.tests', category='general') }}"
+            class="px-4 py-2 rounded-lg {% if current_category == 'general' %}bg-blue-500 text-white{% else %}hover:bg-gray-100{% endif %}">
+            <i class="fas fa-clipboard-check mr-1"></i>Общие
+        </a>
+        <a href="{{ url_for('admin.tests', category='security') }}"
+            class="px-4 py-2 rounded-lg {% if current_category == 'security' %}bg-red-500 text-white{% else %}hover:bg-gray-100{% endif %}">
+            <i class="fas fa-shield-alt mr-1"></i>Информационная безопасность
+        </a>
+    </div>
+</div>
+
+<!-- Список тестов -->
+<div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Название</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Категория</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Вопросов</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Порог</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Статус</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Действия</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for test in tests.items %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">
+                        <div class="font-medium text-gray-800">{{ test.title }}</div>
+                        {% if test.description %}
+                        <div class="text-sm text-gray-500 truncate max-w-xs">{{ test.description[:50] }}...</div>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4">
+                        <span
+                            class="px-2 py-1 text-xs rounded-full bg-{{ test.category_color }}-100 text-{{ test.category_color }}-700">
+                            <i class="fas fa-{{ test.category_icon }} mr-1"></i>{{ test.category_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="font-medium">{{ test.questions.count() }}</span>
+                        <span class="text-gray-500 text-sm">({{ test.get_total_points() }} б.)</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="font-medium">{{ test.passing_score }}%</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if test.is_active %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">Активен</span>
+                        {% else %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700">Неактивен</span>
+                        {% endif %}
+                        {% if test.is_mandatory %}
+                        <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700 ml-1">Обязательный</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <div class="flex items-center justify-end space-x-2">
+                            <a href="{{ url_for('admin.test_results', id=test.id) }}"
+                                class="p-2 text-green-500 hover:bg-green-50 rounded-lg" title="Результаты">
+                                <i class="fas fa-chart-bar"></i>
+                            </a>
+                            <a href="{{ url_for('admin.test_edit', id=test.id) }}"
+                                class="p-2 text-blue-500 hover:bg-blue-50 rounded-lg" title="Редактировать">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form action="{{ url_for('admin.test_delete', id=test.id) }}" method="POST" class="inline"
+                                onsubmit="return confirm('Удалить тест?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                                    title="Удалить">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                        <i class="fas fa-clipboard-check text-4xl text-gray-300 mb-4"></i>
+                        <p>Тестов пока нет</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if tests.pages > 1 %}
+    <div class="px-6 py-4 border-t flex justify-center">
+        <nav class="flex items-center space-x-1">
+            {% for page_num in tests.iter_pages() %}
+            {% if page_num %}
+            <a href="{{ url_for('admin.tests', page=page_num, category=current_category) }}"
+                class="px-3 py-1 rounded {% if page_num == tests.page %}bg-blue-500 text-white{% else %}hover:bg-gray-100{% endif %}">
+                {{ page_num }}
+            </a>
+            {% else %}
+            <span class="px-2">...</span>
+            {% endif %}
+            {% endfor %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

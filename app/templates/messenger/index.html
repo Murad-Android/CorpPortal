@@ -1,0 +1,1452 @@
+{% extends "base.html" %}
+{% block title %}Мессенджер | Корпоративный портал{% endblock %}
+
+{% block extra_css %}
+<style>
+    .messenger-container {
+        height: calc(100vh - 140px);
+        min-height: 500px;
+    }
+
+    .chat-list {
+        height: 100%;
+        overflow-y: auto;
+    }
+
+    .messages-container {
+        height: calc(100% - 180px);
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .message-bubble {
+        max-width: 70%;
+        word-wrap: break-word;
+        position: relative;
+    }
+
+    .message-mine {
+        margin-left: auto;
+    }
+
+    .recording-indicator {
+        animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.5;
+        }
+    }
+
+    .emoji-grid {
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        gap: 4px;
+    }
+
+    .emoji-item {
+        cursor: pointer;
+        font-size: 1.5rem;
+        padding: 4px;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .emoji-item:hover {
+        background: #e5e7eb;
+    }
+
+    .sticker-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+    }
+
+    .sticker-item {
+        cursor: pointer;
+        border-radius: 8px;
+        transition: transform 0.2s;
+    }
+
+    .sticker-item:hover {
+        transform: scale(1.1);
+    }
+
+    .sticker-item img {
+        width: 80px;
+        height: 80px;
+        object-fit: contain;
+    }
+
+    .reply-preview {
+        border-left: 3px solid #3b82f6;
+        padding-left: 8px;
+        background: #f1f5f9;
+    }
+
+    .message-reply {
+        border-left: 2px solid #94a3b8;
+        padding-left: 6px;
+        margin-bottom: 4px;
+        font-size: 0.75rem;
+    }
+
+    .forwarded-info {
+        font-size: 0.7rem;
+        margin-bottom: 4px;
+    }
+
+    .forwarded-info a {
+        text-decoration: underline;
+    }
+
+    .edited-label {
+        font-size: 0.65rem;
+        font-style: italic;
+        opacity: 0.7;
+    }
+
+    .context-menu,
+    .chat-context-menu {
+        position: fixed;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        z-index: 100;
+        min-width: 180px;
+    }
+
+    .context-menu button,
+    .chat-context-menu button {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        text-align: left;
+        padding: 10px 16px;
+        font-size: 14px;
+    }
+
+    .context-menu button:hover,
+    .chat-context-menu button:hover {
+        background: #f3f4f6;
+    }
+
+    .context-menu button:first-child,
+    .chat-context-menu button:first-child {
+        border-radius: 12px 12px 0 0;
+    }
+
+    .context-menu button:last-child,
+    .chat-context-menu button:last-child {
+        border-radius: 0 0 12px 12px;
+    }
+
+    .favorite-star {
+        color: #fbbf24;
+    }
+
+    .group-icon {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .channel-icon {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .member-role-owner {
+        color: #f59e0b;
+    }
+
+    .member-role-admin {
+        color: #3b82f6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4">
+    <a href="{{ url_for('main.index') }}" class="inline-flex items-center text-blue-500 hover:text-blue-600 mb-4">
+        <i class="fas fa-arrow-left mr-2"></i>На главную
+    </a>
+
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden messenger-container">
+        <div class="flex h-full">
+            <!-- Sidebar -->
+            <div class="w-full md:w-80 border-r border-gray-100 flex flex-col" id="chat-sidebar">
+                <div class="p-4 border-b border-gray-100">
+                    <div class="flex space-x-2 mb-3">
+                        <button onclick="showCreateGroupModal('group')"
+                            class="flex-1 py-2 px-3 bg-blue-500 text-white rounded-xl text-sm hover:bg-blue-600">
+                            <i class="fas fa-users mr-1"></i>Чат
+                        </button>
+                        <button onclick="showCreateGroupModal('channel')"
+                            class="flex-1 py-2 px-3 bg-purple-500 text-white rounded-xl text-sm hover:bg-purple-600">
+                            <i class="fas fa-bullhorn mr-1"></i>Канал
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <input type="text" id="user-search" placeholder="Поиск..."
+                            class="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                    <div id="search-results"
+                        class="absolute z-10 mt-1 w-72 bg-white rounded-xl shadow-lg hidden max-h-64 overflow-y-auto">
+                    </div>
+                </div>
+                <div class="chat-list" id="chat-list"></div>
+            </div>
+
+            <!-- Main Chat Area -->
+            <div class="flex-1 flex flex-col hidden md:flex" id="chat-area">
+                <div id="empty-chat" class="flex-1 flex items-center justify-center text-gray-400">
+                    <div class="text-center">
+                        <i class="fas fa-comments text-6xl mb-4"></i>
+                        <p class="text-lg">Выберите чат или создайте новый</p>
+                    </div>
+                </div>
+
+                <div id="active-chat" class="flex-1 flex flex-col hidden">
+                    <div class="p-4 border-b border-gray-100 flex items-center space-x-3">
+                        <button id="back-to-list"
+                            class="md:hidden w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                        <div id="chat-avatar-container">
+                            <img id="chat-user-photo" src="" class="w-10 h-10 rounded-full object-cover">
+                        </div>
+                        <div class="flex-1 cursor-pointer" onclick="showChatInfo()">
+                            <p id="chat-user-name" class="font-semibold text-gray-800"></p>
+                            <p id="chat-user-position" class="text-sm text-gray-500"></p>
+                        </div>
+                        <button id="chat-settings-btn"
+                            class="hidden w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
+                            onclick="showGroupSettings()">
+                            <i class="fas fa-cog text-gray-600"></i>
+                        </button>
+                    </div>
+                    <div class="messages-container p-4" id="messages-container"></div>
+
+                    <!-- Reply Preview -->
+                    <div id="reply-preview" class="hidden px-4 py-2 bg-gray-50 border-t">
+                        <div class="reply-preview rounded-lg p-2 flex items-center justify-between">
+                            <div>
+                                <p class="text-xs text-blue-500 font-medium" id="reply-to-name"></p>
+                                <p class="text-sm text-gray-600 truncate" id="reply-to-text"></p>
+                            </div>
+                            <button id="cancel-reply" class="text-gray-400 hover:text-gray-600"><i
+                                    class="fas fa-times"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Edit Preview -->
+                    <div id="edit-preview" class="hidden px-4 py-2 bg-yellow-50 border-t">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-xs text-yellow-600 font-medium"><i
+                                        class="fas fa-edit mr-1"></i>Редактирование</p>
+                                <p class="text-sm text-gray-600 truncate" id="edit-original-text"></p>
+                            </div>
+                            <button id="cancel-edit" class="text-gray-400 hover:text-gray-600"><i
+                                    class="fas fa-times"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Input Area -->
+                    <div id="input-area" class="p-4 border-t border-gray-100">
+                        <div class="flex items-end space-x-2">
+                            <button id="file-btn"
+                                class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200">
+                                <i class="fas fa-paperclip text-gray-600"></i>
+                            </button>
+                            <input type="file" id="file-input" class="hidden">
+                            <div class="flex-1">
+                                <textarea id="message-input" rows="1" placeholder="Введите сообщение..."
+                                    class="w-full px-4 py-2 bg-gray-100 rounded-xl resize-none focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none max-h-32"></textarea>
+                            </div>
+                            <button id="emoji-btn"
+                                class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200">
+                                <i class="fas fa-smile text-gray-600"></i>
+                            </button>
+                            <button id="sticker-btn"
+                                class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200">
+                                <i class="fas fa-sticky-note text-gray-600"></i>
+                            </button>
+                            <button id="voice-btn"
+                                class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200">
+                                <i class="fas fa-microphone text-gray-600"></i>
+                            </button>
+                            <button id="send-btn"
+                                class="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <div id="recording-ui"
+                            class="hidden mt-3 flex items-center justify-between bg-red-50 rounded-xl p-3">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-3 h-3 bg-red-500 rounded-full recording-indicator"></div>
+                                <span class="text-red-600">Запись...</span>
+                                <span id="recording-time">0:00</span>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button id="cancel-recording" class="px-3 py-1 text-gray-600"><i
+                                        class="fas fa-times mr-1"></i>Отмена</button>
+                                <button id="stop-recording" class="px-3 py-1 bg-red-500 text-white rounded-lg"><i
+                                        class="fas fa-stop mr-1"></i>Отправить</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- No Post Rights -->
+                    <div id="no-post-rights" class="hidden p-4 border-t border-gray-100 text-center text-gray-500">
+                        <i class="fas fa-lock mr-2"></i>Только администраторы могут писать в этот канал
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<!-- Emoji Modal -->
+<div id="emoji-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl p-4 w-96 max-h-96">
+        <div class="flex justify-between items-center mb-3">
+            <h3 class="font-semibold">Эмодзи</h3>
+            <button onclick="document.getElementById('emoji-modal').classList.add('hidden')"
+                class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="emoji-grid" class="emoji-grid max-h-64 overflow-y-auto"></div>
+    </div>
+</div>
+
+<!-- Sticker Modal -->
+<div id="sticker-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl p-4 w-96 max-h-[500px]">
+        <div class="flex justify-between items-center mb-3">
+            <h3 class="font-semibold">Стикеры</h3>
+            <button onclick="document.getElementById('sticker-modal').classList.add('hidden')"
+                class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="flex space-x-2 mb-3">
+            <button id="my-stickers-tab" class="flex-1 py-2 px-4 rounded-lg bg-blue-500 text-white text-sm">Мои</button>
+            <button id="common-stickers-tab"
+                class="flex-1 py-2 px-4 rounded-lg bg-gray-200 text-gray-700 text-sm">Общие</button>
+        </div>
+        <label
+            class="flex items-center justify-center w-full py-2 px-4 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 mb-3">
+            <i class="fas fa-plus mr-2"></i>Загрузить
+            <input type="file" id="sticker-upload" class="hidden" accept="image/*">
+        </label>
+        <div id="sticker-grid" class="sticker-grid max-h-64 overflow-y-auto"></div>
+    </div>
+</div>
+
+<!-- Forward Modal -->
+<div id="forward-modal" class="fixed inset-0 bg-black/50 items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl p-4 w-96 max-h-[500px]">
+        <div class="flex justify-between items-center mb-3">
+            <h3 class="font-semibold">Переслать в...</h3>
+            <button
+                onclick="document.getElementById('forward-modal').classList.add('hidden');document.getElementById('forward-modal').classList.remove('flex')"
+                class="text-gray-400 hover:text-gray-600 cursor-pointer"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="forward-chat-list" class="max-h-80 overflow-y-auto"></div>
+    </div>
+</div>
+
+<!-- Create Group Modal -->
+<div id="create-group-modal" class="fixed inset-0 bg-black/50 items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl p-6 w-96">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-semibold text-lg" id="create-group-title">Новый чат</h3>
+            <button onclick="closeCreateGroupModal()" class="text-gray-400 hover:text-gray-600"><i
+                    class="fas fa-times"></i></button>
+        </div>
+        <input type="hidden" id="create-group-type" value="group">
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Название</label>
+                <input type="text" id="create-group-name"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none"
+                    placeholder="Введите название">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Описание</label>
+                <textarea id="create-group-desc" rows="2"
+                    class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none resize-none"
+                    placeholder="Необязательно"></textarea>
+            </div>
+            <button onclick="createGroup()"
+                class="w-full py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">Создать</button>
+        </div>
+    </div>
+</div>
+
+<!-- Group Settings Modal -->
+<div id="group-settings-modal" class="fixed inset-0 bg-black/50 items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl p-6 w-[450px] max-h-[80vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-semibold text-lg" id="group-settings-title">Настройки</h3>
+            <button onclick="closeGroupSettings()" class="text-gray-400 hover:text-gray-600"><i
+                    class="fas fa-times"></i></button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex space-x-2 mb-4 border-b">
+            <button onclick="showSettingsTab('info')"
+                class="settings-tab px-4 py-2 border-b-2 border-blue-500 text-blue-500" data-tab="info">Инфо</button>
+            <button onclick="showSettingsTab('members')"
+                class="settings-tab px-4 py-2 border-b-2 border-transparent text-gray-500"
+                data-tab="members">Участники</button>
+            <button onclick="showSettingsTab('invite')"
+                class="settings-tab px-4 py-2 border-b-2 border-transparent text-gray-500"
+                data-tab="invite">Приглашение</button>
+        </div>
+
+        <!-- Info Tab -->
+        <div id="settings-tab-info" class="settings-content">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Название</label>
+                    <input type="text" id="edit-group-name"
+                        class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Описание</label>
+                    <textarea id="edit-group-desc" rows="2"
+                        class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none resize-none"></textarea>
+                </div>
+                <div id="channel-settings" class="hidden">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="only-admins-post"
+                            class="w-4 h-4 text-blue-500 border-gray-300 rounded">
+                        <span class="ml-2 text-sm text-gray-700">Только админы могут писать</span>
+                    </label>
+                </div>
+                <button onclick="saveGroupInfo()"
+                    class="w-full py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">Сохранить</button>
+                <button onclick="leaveOrDeleteGroup()" id="leave-group-btn"
+                    class="w-full py-2 bg-red-100 text-red-600 rounded-xl hover:bg-red-200">Покинуть</button>
+            </div>
+        </div>
+
+        <!-- Members Tab -->
+        <div id="settings-tab-members" class="settings-content hidden">
+            <div class="mb-4">
+                <button onclick="showAddMembersModal()" id="add-members-btn"
+                    class="w-full py-2 bg-green-500 text-white rounded-xl hover:bg-green-600">
+                    <i class="fas fa-user-plus mr-2"></i>Добавить участников
+                </button>
+            </div>
+            <div id="members-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
+        </div>
+
+        <!-- Invite Tab -->
+        <div id="settings-tab-invite" class="settings-content hidden">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Ссылка-приглашение</label>
+                    <div class="flex space-x-2">
+                        <input type="text" id="invite-link-input" readonly
+                            class="flex-1 px-4 py-2 bg-gray-100 border border-gray-200 rounded-xl text-sm">
+                        <button onclick="copyInviteLink()"
+                            class="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="regenerateInviteLink()"
+                        class="flex-1 py-2 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300">
+                        <i class="fas fa-sync mr-1"></i>Новая ссылка
+                    </button>
+                    <button onclick="toggleInviteLink()" id="toggle-invite-btn"
+                        class="flex-1 py-2 bg-yellow-100 text-yellow-700 rounded-xl hover:bg-yellow-200">
+                        <i class="fas fa-ban mr-1"></i>Отключить
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Members Modal -->
+<div id="add-members-modal" class="fixed inset-0 bg-black/50 items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl p-6 w-96 max-h-[500px]">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-semibold">Добавить участников</h3>
+            <button onclick="closeAddMembersModal()" class="text-gray-400 hover:text-gray-600"><i
+                    class="fas fa-times"></i></button>
+        </div>
+        <input type="text" id="add-member-search" placeholder="Поиск пользователей..."
+            class="w-full px-4 py-2 border border-gray-200 rounded-xl mb-3 focus:border-blue-500 outline-none">
+        <div id="add-member-results" class="max-h-64 overflow-y-auto space-y-2"></div>
+        <button onclick="addSelectedMembers()"
+            class="w-full mt-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">Добавить выбранных</button>
+    </div>
+</div>
+
+<!-- Member Role Modal -->
+<div id="member-role-modal" class="fixed inset-0 bg-black/50 items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl p-6 w-96">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-semibold">Управление участником</h3>
+            <button onclick="closeMemberRoleModal()" class="text-gray-400 hover:text-gray-600"><i
+                    class="fas fa-times"></i></button>
+        </div>
+        <p id="member-role-name" class="text-gray-600 mb-4"></p>
+        <div class="space-y-2">
+            <button onclick="setMemberRole('admin')"
+                class="w-full py-2 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200">
+                <i class="fas fa-user-shield mr-2"></i>Назначить админом
+            </button>
+            <button onclick="setMemberRole('member')"
+                class="w-full py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200">
+                <i class="fas fa-user mr-2"></i>Сделать участником
+            </button>
+            <button onclick="removeMember()" class="w-full py-2 bg-red-100 text-red-600 rounded-xl hover:bg-red-200">
+                <i class="fas fa-user-minus mr-2"></i>Удалить из группы
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- File Preview Modal -->
+<div id="file-preview-modal" class="fixed inset-0 bg-black/50 items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl p-6 w-96 max-w-[90vw]">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-semibold">Отправка файла</h3>
+            <button onclick="cancelFilePreview()" class="text-gray-400 hover:text-gray-600"><i
+                    class="fas fa-times"></i></button>
+        </div>
+
+        <!-- Image Preview -->
+        <div id="file-preview-image-container" class="hidden mb-4">
+            <img id="file-preview-image" src="" class="max-h-64 mx-auto rounded-lg object-contain">
+        </div>
+
+        <!-- File Info -->
+        <div id="file-preview-info" class="mb-4 p-3 bg-gray-50 rounded-xl">
+            <div class="flex items-center space-x-3">
+                <div id="file-preview-icon" class="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                    <i class="fas fa-file text-blue-500 text-xl"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p id="file-preview-name" class="font-medium text-gray-800 truncate"></p>
+                    <p id="file-preview-size" class="text-sm text-gray-500"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Caption Input -->
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Подпись (необязательно)</label>
+            <textarea id="file-preview-caption" rows="2" placeholder="Добавить подпись..."
+                class="w-full px-4 py-2 border border-gray-200 rounded-xl focus:border-blue-500 outline-none resize-none"></textarea>
+        </div>
+
+        <div class="flex space-x-2">
+            <button onclick="cancelFilePreview()"
+                class="flex-1 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200">
+                Отмена
+            </button>
+            <button onclick="confirmFileSend()" class="flex-1 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">
+                <i class="fas fa-paper-plane mr-2"></i>Отправить
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Context Menus -->
+<div id="context-menu" class="context-menu hidden">
+    <button id="ctx-reply"><i class="fas fa-reply mr-3 text-gray-400"></i>Ответить</button>
+    <button id="ctx-edit"><i class="fas fa-edit mr-3 text-gray-400"></i>Редактировать</button>
+    <button id="ctx-forward"><i class="fas fa-share mr-3 text-gray-400"></i>Переслать</button>
+    <button id="ctx-favorite"><i class="fas fa-star mr-3 text-gray-400"></i>В избранное</button>
+    <button id="ctx-copy"><i class="fas fa-copy mr-3 text-gray-400"></i>Копировать</button>
+    <button id="ctx-delete"><i class="fas fa-trash mr-3 text-gray-400"></i>Удалить у себя</button>
+    <button id="ctx-delete-all" class="text-red-500"><i class="fas fa-trash-alt mr-3"></i>Удалить у всех</button>
+</div>
+
+<div id="chat-context-menu" class="chat-context-menu hidden">
+    <button id="chat-ctx-delete"><i class="fas fa-trash mr-3 text-gray-400"></i>Удалить у себя</button>
+    <button id="chat-ctx-delete-all" class="text-red-500"><i class="fas fa-trash-alt mr-3"></i>Удалить у всех</button>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const currentUserId = {{ current_user.id }};
+    const csrfToken = '{{ csrf_token() }}';
+
+    // State
+    let currentChatId = null, currentGroupId = null, currentChatType = null;
+    let lastMessageId = 0, messagePollingInterval = null;
+    let mediaRecorder = null, audioChunks = [], recordingStartTime = null, recordingTimer = null;
+    let replyToMessageId = null, editMessageId = null, contextMessageId = null, contextChatId = null, forwardMessageId = null;
+    let currentGroupData = null, selectedMembersToAdd = [];
+    let targetMemberId = null;
+
+    const emojis = ['😊', '😂', '😍', '🥰', '😘', '😎', '🤔', '😢', '😭', '😡', '👍', '👎', '👏', '🙌', '🤝', '💪', '✌️', '🤞', '👀', '🙈', '❤️', '💔', '💕', '💖', '💗', '💙', '💚', '💛', '🧡', '💜', '🔥', '⭐', '✨', '🎉', '🎊', '🎁', '🏆', '🥇', '🎯', '💯'];
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadChats();
+        initEmojiGrid();
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('chat')) openPrivateChat(parseInt(params.get('chat')));
+        else if (params.get('group')) openGroupChat(parseInt(params.get('group')));
+    });
+
+    function initEmojiGrid() {
+        document.getElementById('emoji-grid').innerHTML = emojis.map(e => `<span class="emoji-item">${e}</span>`).join('');
+        document.getElementById('emoji-grid').onclick = e => {
+            if (e.target.classList.contains('emoji-item')) {
+                document.getElementById('message-input').value += e.target.textContent;
+                document.getElementById('emoji-modal').classList.add('hidden');
+            }
+        };
+    }
+
+    async function loadChats() {
+        const data = await (await fetch('/messenger/chats')).json();
+        const chatList = document.getElementById('chat-list');
+        if (!data.chats.length) {
+            chatList.innerHTML = '<div class="p-8 text-center text-gray-400"><i class="fas fa-comments text-4xl mb-2"></i><p>Нет чатов</p></div>';
+            return;
+        }
+        chatList.innerHTML = data.chats.map(c => {
+            let icon = '';
+            if (c.type === 'favorites') icon = '<div class="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center"><i class="fas fa-star text-yellow-500 text-xl"></i></div>';
+            else if (c.type === 'group') icon = `<div class="w-12 h-12 rounded-full group-icon flex items-center justify-center text-white"><i class="fas fa-users"></i></div>`;
+            else if (c.type === 'channel') icon = `<div class="w-12 h-12 rounded-full channel-icon flex items-center justify-center text-white"><i class="fas fa-bullhorn"></i></div>`;
+            else icon = `<img src="/static/${c.photo}" class="w-12 h-12 rounded-full object-cover">`;
+
+            const isActive = (c.type === 'private' || c.type === 'favorites') ? c.id === currentChatId : c.id === currentGroupId;
+            const onclick = (c.type === 'group' || c.type === 'channel') ? `openGroupChat(${c.id})` : `openPrivateChat(${c.id})`;
+            const oncontext = (c.type === 'private') ? `showChatContextMenu(event, ${c.id}, false)` : '';
+
+            return `<div class="chat-item p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-50 ${isActive ? 'bg-blue-50' : ''}" onclick="${onclick}" ${oncontext ? `oncontextmenu="${oncontext}"` : ''}>
+            <div class="flex items-center space-x-3">
+                <div class="relative">${icon}
+                    ${c.unread_count > 0 ? `<span class="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">${c.unread_count}</span>` : ''}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between">
+                        <p class="font-medium text-gray-800 truncate">${c.name}</p>
+                        <span class="text-xs text-gray-400">${c.last_message_time}</span>
+                    </div>
+                    <p class="text-sm text-gray-500 truncate">${c.last_message || c.subtitle || 'Нет сообщений'}</p>
+                </div>
+            </div>
+        </div>`;
+        }).join('');
+    }
+
+    // === Open Chats ===
+    async function openPrivateChat(chatId) {
+        currentChatId = chatId; currentGroupId = null; currentChatType = 'private'; lastMessageId = 0;
+        if (messagePollingInterval) clearInterval(messagePollingInterval);
+
+        const info = await (await fetch(`/messenger/chat/${chatId}/messages?last_id=0`)).json();
+        // Get chat info from list
+        const chatsData = await (await fetch('/messenger/chats')).json();
+        const chatInfo = chatsData.chats.find(c => c.id === chatId && (c.type === 'private' || c.type === 'favorites'));
+
+        if (chatInfo) {
+            document.getElementById('chat-avatar-container').innerHTML = chatInfo.is_favorites
+                ? '<div class="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center"><i class="fas fa-star text-yellow-500"></i></div>'
+                : `<img id="chat-user-photo" src="/static/${chatInfo.photo}" class="w-10 h-10 rounded-full object-cover">`;
+            document.getElementById('chat-user-name').textContent = chatInfo.name;
+            document.getElementById('chat-user-position').textContent = chatInfo.subtitle || '';
+        }
+
+        document.getElementById('chat-settings-btn').classList.add('hidden');
+        document.getElementById('empty-chat').classList.add('hidden');
+        document.getElementById('active-chat').classList.remove('hidden');
+        document.getElementById('input-area').classList.remove('hidden');
+        document.getElementById('no-post-rights').classList.add('hidden');
+
+        if (window.innerWidth < 768) {
+            document.getElementById('chat-sidebar').classList.add('hidden');
+            document.getElementById('chat-area').classList.remove('hidden');
+        }
+
+        await loadPrivateMessages(chatId);
+        loadChats();
+        messagePollingInterval = setInterval(() => currentChatId && loadPrivateMessages(currentChatId, true), 2000);
+    }
+
+    async function openGroupChat(groupId) {
+        currentGroupId = groupId; currentChatId = null; lastMessageId = 0;
+        if (messagePollingInterval) clearInterval(messagePollingInterval);
+
+        const groupData = await (await fetch(`/messenger/group/${groupId}`)).json();
+        currentGroupData = groupData.group;
+        currentChatType = currentGroupData.type;
+
+        const icon = currentGroupData.type === 'channel'
+            ? '<div class="w-10 h-10 rounded-full channel-icon flex items-center justify-center text-white"><i class="fas fa-bullhorn"></i></div>'
+            : '<div class="w-10 h-10 rounded-full group-icon flex items-center justify-center text-white"><i class="fas fa-users"></i></div>';
+
+        document.getElementById('chat-avatar-container').innerHTML = icon;
+        document.getElementById('chat-user-name').textContent = currentGroupData.name;
+        document.getElementById('chat-user-position').textContent = `${currentGroupData.member_count} участников`;
+        document.getElementById('chat-settings-btn').classList.remove('hidden');
+
+        document.getElementById('empty-chat').classList.add('hidden');
+        document.getElementById('active-chat').classList.remove('hidden');
+
+        // Check post rights
+        if (currentGroupData.can_post) {
+            document.getElementById('input-area').classList.remove('hidden');
+            document.getElementById('no-post-rights').classList.add('hidden');
+        } else {
+            document.getElementById('input-area').classList.add('hidden');
+            document.getElementById('no-post-rights').classList.remove('hidden');
+        }
+
+        if (window.innerWidth < 768) {
+            document.getElementById('chat-sidebar').classList.add('hidden');
+            document.getElementById('chat-area').classList.remove('hidden');
+        }
+
+        await loadGroupMessages(groupId);
+        loadChats();
+        messagePollingInterval = setInterval(() => currentGroupId && loadGroupMessages(currentGroupId, true), 2000);
+    }
+
+    // === Load Messages ===
+    async function loadPrivateMessages(chatId, isPolling = false) {
+        const container = document.getElementById('messages-container');
+        if (!isPolling) { container.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i></div>'; lastMessageId = 0; }
+
+        const url = isPolling && lastMessageId > 0 ? `/messenger/chat/${chatId}/messages?last_id=${lastMessageId}` : `/messenger/chat/${chatId}/messages`;
+        const data = await (await fetch(url)).json();
+
+        if (!isPolling) {
+            container.innerHTML = data.messages.length ? data.messages.map(m => renderMessage(m)).join('') : '<div class="text-center text-gray-400 py-8">Нет сообщений</div>';
+            container.scrollTop = container.scrollHeight;
+        } else if (data.messages.length) {
+            const wasAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 100;
+            data.messages.forEach(m => container.innerHTML += renderMessage(m));
+            if (wasAtBottom) container.scrollTop = container.scrollHeight;
+        }
+        if (data.last_id) lastMessageId = data.last_id;
+    }
+
+    async function loadGroupMessages(groupId, isPolling = false) {
+        const container = document.getElementById('messages-container');
+        if (!isPolling) { container.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin"></i></div>'; lastMessageId = 0; }
+
+        const url = isPolling && lastMessageId > 0 ? `/messenger/group/${groupId}/messages?last_id=${lastMessageId}` : `/messenger/group/${groupId}/messages`;
+        const data = await (await fetch(url)).json();
+
+        if (!isPolling) {
+            container.innerHTML = data.messages.length ? data.messages.map(m => renderMessage(m, true)).join('') : '<div class="text-center text-gray-400 py-8">Нет сообщений</div>';
+            container.scrollTop = container.scrollHeight;
+        } else if (data.messages.length) {
+            const wasAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 100;
+            data.messages.forEach(m => container.innerHTML += renderMessage(m, true));
+            if (wasAtBottom) container.scrollTop = container.scrollHeight;
+        }
+        if (data.last_id) lastMessageId = data.last_id;
+    }
+
+    function renderMessage(msg, isGroup = false) {
+        const isMine = msg.sender_id === currentUserId;
+        let html = '';
+
+        if (msg.forwarded_from) {
+            html += `<div class="forwarded-info ${isMine ? 'text-blue-100' : 'text-gray-500'}">
+            <i class="fas fa-share mr-1"></i>Переслано от <a href="/staff/${msg.forwarded_from.user_id}" class="hover:underline">${msg.forwarded_from.user_name}</a>
+        </div>`;
+        }
+
+        if (msg.reply_to) {
+            let replyText = msg.reply_to.content || (msg.reply_to.is_sticker ? '🎨 Стикер' : '🎤 Голосовое');
+            html += `<div class="message-reply ${isMine ? 'text-blue-100 border-blue-300' : 'text-gray-500'}">${msg.reply_to.sender_name}: ${replyText}</div>`;
+        }
+
+        if (msg.is_sticker || msg.message_type === 'sticker') {
+            html += `<img src="/static/${msg.file_path}" class="max-w-[120px] rounded-lg">`;
+        } else if (msg.message_type === 'voice') {
+            html += `<div class="flex items-center space-x-2"><button onclick="playVoice(this, '/static/${msg.file_path}')" class="w-8 h-8 rounded-full ${isMine ? 'bg-blue-400' : 'bg-gray-200'} flex items-center justify-center"><i class="fas fa-play text-sm"></i></button><span class="text-xs">${msg.duration || 0}с</span></div>`;
+        } else if (msg.message_type === 'file') {
+            const isImage = msg.file_name && /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(msg.file_name);
+            if (isImage) {
+                html += `<div class="mb-1"><img src="/static/${msg.file_path}" class="max-w-[200px] rounded-lg cursor-pointer" onclick="window.open('/static/${msg.file_path}', '_blank')"></div>`;
+            } else {
+                html += `<a href="/static/${msg.file_path}" download="${msg.file_name}" class="flex items-center space-x-2 p-2 ${isMine ? 'bg-blue-400/30' : 'bg-gray-200'} rounded-lg mb-1"><i class="fas fa-file"></i><span class="underline text-sm truncate max-w-[150px]">${msg.file_name}</span></a>`;
+            }
+            if (msg.content) html += `<p class="whitespace-pre-wrap">${msg.content}</p>`;
+        } else {
+            html += `<p class="whitespace-pre-wrap">${msg.content || ''}</p>`;
+        }
+
+        const favIcon = msg.is_favorite ? '<i class="fas fa-star favorite-star text-xs ml-1"></i>' : '';
+        const editedLabel = msg.is_edited ? '<span class="edited-label ml-1">изменено</span>' : '';
+        const senderInfo = isGroup && !isMine ? `<p class="text-xs font-medium ${isMine ? 'text-blue-200' : 'text-gray-600'} mb-1">${msg.sender_name}</p>` : '';
+
+        return `<div class="flex ${isMine ? 'justify-end' : 'justify-start'} mb-3" data-msg-id="${msg.id}" data-sender-id="${msg.sender_id}" data-msg-type="${msg.message_type}" oncontextmenu="showContextMenu(event, ${msg.id}, ${isMine}, ${msg.is_favorite || false}, '${msg.message_type}')">
+        ${!isMine && isGroup ? `<img src="/static/${msg.sender_photo}" class="w-8 h-8 rounded-full object-cover mr-2 mt-1">` : ''}
+        <div class="message-bubble ${isMine ? 'message-mine bg-blue-500 text-white' : 'bg-gray-100'} rounded-2xl px-4 py-2">
+            ${senderInfo}${html}
+            <div class="flex items-center justify-end space-x-1 mt-1">
+                <span class="text-xs ${isMine ? 'text-blue-100' : 'text-gray-400'}">${msg.time}${editedLabel}${favIcon}</span>
+                ${isMine ? `<i class="fas fa-check${msg.is_read ? '-double' : ''} text-xs text-blue-200"></i>` : ''}
+            </div>
+        </div>
+    </div>`;
+    }
+
+    // === Send Messages ===
+    document.getElementById('send-btn').onclick = sendMessage;
+    document.getElementById('message-input').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
+
+    async function sendMessage() {
+        const input = document.getElementById('message-input');
+        const content = input.value.trim();
+        if (!content) return;
+
+        // Edit mode
+        if (editMessageId) {
+            const data = await (await fetch(`/messenger/message/${editMessageId}/edit`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ content })
+            })).json();
+            if (data.success) {
+                cancelEdit();
+                if (currentGroupId) loadGroupMessages(currentGroupId);
+                else loadPrivateMessages(currentChatId);
+            }
+            input.value = '';
+            return;
+        }
+
+        // Normal send
+        let url, body;
+        if (currentGroupId) {
+            url = `/messenger/group/${currentGroupId}/send`;
+            body = { content, reply_to_id: replyToMessageId };
+        } else if (currentChatId) {
+            url = `/messenger/chat/${currentChatId}/send`;
+            body = { content, reply_to_id: replyToMessageId };
+        } else return;
+
+        input.value = ''; input.style.height = 'auto';
+
+        const data = await (await fetch(url, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify(body)
+        })).json();
+
+        if (data.message) {
+            const container = document.getElementById('messages-container');
+            const ph = container.querySelector('.text-gray-400.py-8'); if (ph) container.innerHTML = '';
+            container.innerHTML += renderMessage(data.message, !!currentGroupId);
+            container.scrollTop = container.scrollHeight;
+            lastMessageId = data.message.id;
+            loadChats(); cancelReply();
+        }
+    }
+
+    // === File, Voice, Stickers ===
+    let pendingFile = null;
+
+    document.getElementById('file-btn').onclick = () => document.getElementById('file-input').click();
+    document.getElementById('file-input').onchange = e => {
+        if (!e.target.files.length) return;
+        if (!currentChatId && !currentGroupId) { alert('Выберите чат'); e.target.value = ''; return; }
+
+        const file = e.target.files[0];
+        pendingFile = file;
+
+        // Show preview modal
+        const modal = document.getElementById('file-preview-modal');
+        const imageContainer = document.getElementById('file-preview-image-container');
+        const previewImage = document.getElementById('file-preview-image');
+        const fileIcon = document.getElementById('file-preview-icon');
+
+        // File info
+        document.getElementById('file-preview-name').textContent = file.name;
+        document.getElementById('file-preview-size').textContent = formatFileSize(file.size);
+        document.getElementById('file-preview-caption').value = '';
+
+        // Check if image
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = ev => {
+                previewImage.src = ev.target.result;
+                imageContainer.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+            fileIcon.innerHTML = '<i class="fas fa-image text-green-500 text-xl"></i>';
+            fileIcon.className = 'w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center';
+        } else {
+            imageContainer.classList.add('hidden');
+            previewImage.src = '';
+            // Set icon based on file type
+            let iconClass = 'fa-file', bgClass = 'bg-blue-100', textClass = 'text-blue-500';
+            if (file.type.includes('pdf')) { iconClass = 'fa-file-pdf'; bgClass = 'bg-red-100'; textClass = 'text-red-500'; }
+            else if (file.type.includes('word') || file.name.endsWith('.doc') || file.name.endsWith('.docx')) { iconClass = 'fa-file-word'; bgClass = 'bg-blue-100'; textClass = 'text-blue-500'; }
+            else if (file.type.includes('excel') || file.name.endsWith('.xls') || file.name.endsWith('.xlsx')) { iconClass = 'fa-file-excel'; bgClass = 'bg-green-100'; textClass = 'text-green-500'; }
+            else if (file.type.includes('zip') || file.type.includes('rar') || file.type.includes('7z')) { iconClass = 'fa-file-archive'; bgClass = 'bg-yellow-100'; textClass = 'text-yellow-600'; }
+            else if (file.type.includes('video')) { iconClass = 'fa-file-video'; bgClass = 'bg-purple-100'; textClass = 'text-purple-500'; }
+            else if (file.type.includes('audio')) { iconClass = 'fa-file-audio'; bgClass = 'bg-pink-100'; textClass = 'text-pink-500'; }
+            fileIcon.innerHTML = `<i class="fas ${iconClass} ${textClass} text-xl"></i>`;
+            fileIcon.className = `w-12 h-12 rounded-xl ${bgClass} flex items-center justify-center`;
+        }
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        e.target.value = '';
+    };
+
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' Б';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' КБ';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' МБ';
+    }
+
+    function cancelFilePreview() {
+        pendingFile = null;
+        document.getElementById('file-preview-modal').classList.add('hidden');
+        document.getElementById('file-preview-modal').classList.remove('flex');
+        document.getElementById('file-preview-image').src = '';
+        document.getElementById('file-preview-caption').value = '';
+    }
+
+    async function confirmFileSend() {
+        if (!pendingFile) return;
+
+        const caption = document.getElementById('file-preview-caption').value.trim();
+        const fd = new FormData();
+        fd.append('file', pendingFile);
+        if (caption) fd.append('caption', caption);
+
+        const url = currentGroupId ? `/messenger/group/${currentGroupId}/file` : `/messenger/chat/${currentChatId}/file`;
+
+        cancelFilePreview();
+
+        const data = await (await fetch(url, { method: 'POST', headers: { 'X-CSRFToken': csrfToken }, body: fd })).json();
+        if (data.message) {
+            document.getElementById('messages-container').innerHTML += renderMessage(data.message, !!currentGroupId);
+            lastMessageId = data.message.id; loadChats();
+        }
+    }
+
+    document.getElementById('voice-btn').onclick = startRecording;
+    document.getElementById('cancel-recording').onclick = cancelRecording;
+    document.getElementById('stop-recording').onclick = stopAndSendRecording;
+
+    async function startRecording() {
+        if (!currentChatId && !currentGroupId) return alert('Выберите чат');
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream); audioChunks = [];
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.start(); recordingStartTime = Date.now();
+            document.getElementById('recording-ui').classList.remove('hidden');
+            document.getElementById('voice-btn').classList.add('hidden');
+            recordingTimer = setInterval(() => {
+                const s = Math.floor((Date.now() - recordingStartTime) / 1000);
+                document.getElementById('recording-time').textContent = `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+            }, 1000);
+        } catch (e) { alert('Нет доступа к микрофону'); }
+    }
+
+    function cancelRecording() {
+        if (mediaRecorder?.state !== 'inactive') { mediaRecorder.stop(); mediaRecorder.stream.getTracks().forEach(t => t.stop()); }
+        clearInterval(recordingTimer);
+        document.getElementById('recording-ui').classList.add('hidden');
+        document.getElementById('voice-btn').classList.remove('hidden');
+    }
+
+    async function stopAndSendRecording() {
+        if (!mediaRecorder) return;
+        const duration = Math.floor((Date.now() - recordingStartTime) / 1000);
+        mediaRecorder.onstop = async () => {
+            const fd = new FormData(); fd.append('audio', new Blob(audioChunks, { type: 'audio/webm' }), 'voice.webm'); fd.append('duration', duration);
+            const url = currentGroupId ? `/messenger/group/${currentGroupId}/voice` : `/messenger/chat/${currentChatId}/voice`;
+            const data = await (await fetch(url, { method: 'POST', headers: { 'X-CSRFToken': csrfToken }, body: fd })).json();
+            if (data.message) {
+                document.getElementById('messages-container').innerHTML += renderMessage(data.message, !!currentGroupId);
+                lastMessageId = data.message.id; loadChats();
+            }
+        };
+        mediaRecorder.stop(); mediaRecorder.stream.getTracks().forEach(t => t.stop());
+        clearInterval(recordingTimer);
+        document.getElementById('recording-ui').classList.add('hidden');
+        document.getElementById('voice-btn').classList.remove('hidden');
+    }
+
+    let currentAudio = null;
+    function playVoice(btn, src) {
+        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+        const audio = new Audio(src); currentAudio = audio;
+        const icon = btn.querySelector('i'); icon.classList.remove('fa-play'); icon.classList.add('fa-pause');
+        audio.play(); audio.onended = () => { icon.classList.remove('fa-pause'); icon.classList.add('fa-play'); currentAudio = null; };
+    }
+
+    // Emoji & Stickers
+    document.getElementById('emoji-btn').onclick = () => document.getElementById('emoji-modal').classList.remove('hidden');
+    let currentStickerTab = 'user';
+    document.getElementById('sticker-btn').onclick = () => { document.getElementById('sticker-modal').classList.remove('hidden'); loadStickers(); };
+    document.getElementById('my-stickers-tab').onclick = () => { currentStickerTab = 'user'; updateStickerTabs(); loadStickers(); };
+    document.getElementById('common-stickers-tab').onclick = () => { currentStickerTab = 'common'; updateStickerTabs(); loadStickers(); };
+
+    function updateStickerTabs() {
+        document.getElementById('my-stickers-tab').className = currentStickerTab === 'user' ? 'flex-1 py-2 px-4 rounded-lg bg-blue-500 text-white text-sm' : 'flex-1 py-2 px-4 rounded-lg bg-gray-200 text-gray-700 text-sm';
+        document.getElementById('common-stickers-tab').className = currentStickerTab === 'common' ? 'flex-1 py-2 px-4 rounded-lg bg-blue-500 text-white text-sm' : 'flex-1 py-2 px-4 rounded-lg bg-gray-200 text-gray-700 text-sm';
+    }
+
+    async function loadStickers() {
+        const data = await (await fetch('/messenger/stickers')).json();
+        const stickers = currentStickerTab === 'user' ? data.user_stickers : data.common_stickers;
+        document.getElementById('sticker-grid').innerHTML = stickers.length ? stickers.map(s => `<div class="sticker-item" onclick="sendSticker('${s.path}')"><img src="/static/${s.path}"></div>`).join('') : '<div class="col-span-4 text-center text-gray-400 py-4">Нет стикеров</div>';
+    }
+
+    async function sendSticker(path) {
+        const url = currentGroupId ? `/messenger/group/${currentGroupId}/sticker` : `/messenger/chat/${currentChatId}/sticker`;
+        const data = await (await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken }, body: JSON.stringify({ sticker_path: path }) })).json();
+        if (data.message) {
+            document.getElementById('messages-container').innerHTML += renderMessage(data.message, !!currentGroupId);
+            lastMessageId = data.message.id; loadChats();
+        }
+        document.getElementById('sticker-modal').classList.add('hidden');
+    }
+
+    document.getElementById('sticker-upload').onchange = async e => {
+        if (!e.target.files.length) return;
+        const fd = new FormData(); fd.append('sticker', e.target.files[0]);
+        await fetch('/messenger/stickers/upload', { method: 'POST', headers: { 'X-CSRFToken': csrfToken }, body: fd });
+        loadStickers(); e.target.value = '';
+    };
+
+    // === Context Menu ===
+    function showContextMenu(e, msgId, isMine, isFavorite, msgType) {
+        e.preventDefault(); contextMessageId = msgId;
+        const menu = document.getElementById('context-menu');
+        menu.style.left = Math.min(e.pageX, window.innerWidth - 200) + 'px';
+        menu.style.top = Math.min(e.pageY, window.innerHeight - 300) + 'px';
+        menu.classList.remove('hidden');
+
+        document.getElementById('ctx-edit').style.display = (isMine && msgType === 'text') ? 'flex' : 'none';
+        document.getElementById('ctx-delete-all').style.display = isMine ? 'flex' : 'none';
+        document.getElementById('ctx-favorite').style.display = currentChatId ? 'flex' : 'none';
+        document.getElementById('ctx-favorite').innerHTML = `<i class="fas fa-star mr-3 ${isFavorite ? 'text-yellow-500' : 'text-gray-400'}"></i>${isFavorite ? 'Убрать из избранного' : 'В избранное'}`;
+    }
+
+    document.addEventListener('click', () => {
+        document.getElementById('context-menu').classList.add('hidden');
+        document.getElementById('chat-context-menu').classList.add('hidden');
+    });
+
+    document.getElementById('ctx-reply').onclick = () => {
+        const el = document.querySelector(`[data-msg-id="${contextMessageId}"]`);
+        if (el) {
+            replyToMessageId = contextMessageId;
+            const text = el.querySelector('.message-bubble p')?.textContent || '📎';
+            document.getElementById('reply-to-name').textContent = 'Ответ';
+            document.getElementById('reply-to-text').textContent = text.substring(0, 50);
+            document.getElementById('reply-preview').classList.remove('hidden');
+        }
+    };
+
+    document.getElementById('ctx-edit').onclick = () => {
+        const el = document.querySelector(`[data-msg-id="${contextMessageId}"]`);
+        if (el) {
+            editMessageId = contextMessageId;
+            const text = el.querySelector('.message-bubble p')?.textContent || '';
+            document.getElementById('edit-original-text').textContent = text.substring(0, 50);
+            document.getElementById('edit-preview').classList.remove('hidden');
+            document.getElementById('message-input').value = text;
+            document.getElementById('message-input').focus();
+        }
+    };
+
+    document.getElementById('ctx-copy').onclick = () => {
+        const text = document.querySelector(`[data-msg-id="${contextMessageId}"] .message-bubble p`)?.textContent;
+        if (text) navigator.clipboard.writeText(text);
+    };
+
+    document.getElementById('ctx-delete').onclick = async () => {
+        await fetch(`/messenger/message/${contextMessageId}/delete`, { method: 'POST', headers: { 'X-CSRFToken': csrfToken } });
+        if (currentGroupId) loadGroupMessages(currentGroupId);
+        else loadPrivateMessages(currentChatId);
+    };
+
+    document.getElementById('ctx-delete-all').onclick = async () => {
+        if (confirm('Удалить сообщение у всех?')) {
+            await fetch(`/messenger/message/${contextMessageId}/delete-all`, { method: 'POST', headers: { 'X-CSRFToken': csrfToken } });
+            if (currentGroupId) loadGroupMessages(currentGroupId);
+            else loadPrivateMessages(currentChatId);
+        }
+    };
+
+    document.getElementById('ctx-favorite').onclick = async () => {
+        await fetch(`/messenger/message/${contextMessageId}/favorite`, { method: 'POST', headers: { 'X-CSRFToken': csrfToken } });
+        loadPrivateMessages(currentChatId); loadChats();
+    };
+
+    document.getElementById('ctx-forward').onclick = () => {
+        forwardMessageId = contextMessageId;
+        document.getElementById('forward-modal').classList.remove('hidden');
+        document.getElementById('forward-modal').classList.add('flex');
+        loadForwardChats();
+    };
+
+    async function loadForwardChats() {
+        const data = await (await fetch('/messenger/chats')).json();
+        document.getElementById('forward-chat-list').innerHTML = data.chats.filter(c => c.type === 'private' || c.type === 'favorites').map(c => `
+        <div class="p-3 hover:bg-gray-50 cursor-pointer flex items-center space-x-3" onclick="forwardTo(${c.id})">
+            ${c.is_favorites ? '<div class="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center"><i class="fas fa-star text-yellow-500"></i></div>' : `<img src="/static/${c.photo}" class="w-10 h-10 rounded-full object-cover">`}
+            <span class="font-medium">${c.name}</span>
+        </div>
+    `).join('');
+    }
+
+    async function forwardTo(chatId) {
+        await fetch(`/messenger/chat/${chatId}/forward`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ message_id: forwardMessageId })
+        });
+        document.getElementById('forward-modal').classList.add('hidden');
+        document.getElementById('forward-modal').classList.remove('flex');
+        loadChats();
+    }
+
+    // Reply/Edit cancel
+    document.getElementById('cancel-reply').onclick = cancelReply;
+    document.getElementById('cancel-edit').onclick = cancelEdit;
+    function cancelReply() { replyToMessageId = null; document.getElementById('reply-preview').classList.add('hidden'); }
+    function cancelEdit() { editMessageId = null; document.getElementById('edit-preview').classList.add('hidden'); document.getElementById('message-input').value = ''; }
+
+    // === Groups & Channels ===
+    function showCreateGroupModal(type) {
+        document.getElementById('create-group-type').value = type;
+        document.getElementById('create-group-title').textContent = type === 'channel' ? 'Новый канал' : 'Новый групповой чат';
+        document.getElementById('create-group-name').value = '';
+        document.getElementById('create-group-desc').value = '';
+        document.getElementById('create-group-modal').classList.remove('hidden');
+        document.getElementById('create-group-modal').classList.add('flex');
+    }
+
+    function closeCreateGroupModal() {
+        document.getElementById('create-group-modal').classList.add('hidden');
+        document.getElementById('create-group-modal').classList.remove('flex');
+    }
+
+    async function createGroup() {
+        const name = document.getElementById('create-group-name').value.trim();
+        const desc = document.getElementById('create-group-desc').value.trim();
+        const type = document.getElementById('create-group-type').value;
+
+        if (!name) return alert('Введите название');
+
+        const data = await (await fetch('/messenger/groups/create', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ name, description: desc, type })
+        })).json();
+
+        if (data.success) {
+            closeCreateGroupModal();
+            loadChats();
+            openGroupChat(data.group.id);
+        }
+    }
+
+    function showGroupSettings() {
+        if (!currentGroupData) return;
+        document.getElementById('group-settings-title').textContent = currentGroupData.type === 'channel' ? 'Настройки канала' : 'Настройки чата';
+        document.getElementById('edit-group-name').value = currentGroupData.name;
+        document.getElementById('edit-group-desc').value = currentGroupData.description || '';
+
+        if (currentGroupData.type === 'channel') {
+            document.getElementById('channel-settings').classList.remove('hidden');
+            document.getElementById('only-admins-post').checked = currentGroupData.only_admins_can_post;
+        } else {
+            document.getElementById('channel-settings').classList.add('hidden');
+        }
+
+        document.getElementById('leave-group-btn').textContent = currentGroupData.my_role === 'owner' ? 'Удалить группу' : 'Покинуть';
+
+        showSettingsTab('info');
+        document.getElementById('group-settings-modal').classList.remove('hidden');
+        document.getElementById('group-settings-modal').classList.add('flex');
+    }
+
+    function closeGroupSettings() {
+        document.getElementById('group-settings-modal').classList.add('hidden');
+        document.getElementById('group-settings-modal').classList.remove('flex');
+    }
+
+    function showSettingsTab(tab) {
+        document.querySelectorAll('.settings-tab').forEach(t => {
+            t.classList.remove('border-blue-500', 'text-blue-500');
+            t.classList.add('border-transparent', 'text-gray-500');
+        });
+        document.querySelector(`.settings-tab[data-tab="${tab}"]`).classList.add('border-blue-500', 'text-blue-500');
+        document.querySelector(`.settings-tab[data-tab="${tab}"]`).classList.remove('border-transparent', 'text-gray-500');
+
+        document.querySelectorAll('.settings-content').forEach(c => c.classList.add('hidden'));
+        document.getElementById(`settings-tab-${tab}`).classList.remove('hidden');
+
+        if (tab === 'members') loadGroupMembers();
+        if (tab === 'invite') loadInviteLink();
+    }
+
+    async function saveGroupInfo() {
+        const data = await (await fetch(`/messenger/group/${currentGroupId}/edit`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({
+                name: document.getElementById('edit-group-name').value,
+                description: document.getElementById('edit-group-desc').value,
+                only_admins_can_post: document.getElementById('only-admins-post').checked
+            })
+        })).json();
+
+        if (data.success) {
+            currentGroupData = data.group;
+            document.getElementById('chat-user-name').textContent = data.group.name;
+            loadChats();
+            alert('Сохранено');
+        }
+    }
+
+    async function leaveOrDeleteGroup() {
+        if (currentGroupData.my_role === 'owner') {
+            if (confirm('Удалить группу? Это действие нельзя отменить.')) {
+                await fetch(`/messenger/group/${currentGroupId}/delete`, { method: 'POST', headers: { 'X-CSRFToken': csrfToken } });
+                closeGroupSettings();
+                currentGroupId = null;
+                document.getElementById('active-chat').classList.add('hidden');
+                document.getElementById('empty-chat').classList.remove('hidden');
+                loadChats();
+            }
+        } else {
+            if (confirm('Покинуть группу?')) {
+                await fetch(`/messenger/group/${currentGroupId}/leave`, { method: 'POST', headers: { 'X-CSRFToken': csrfToken } });
+                closeGroupSettings();
+                currentGroupId = null;
+                document.getElementById('active-chat').classList.add('hidden');
+                document.getElementById('empty-chat').classList.remove('hidden');
+                loadChats();
+            }
+        }
+    }
+
+    // === Members Management ===
+    async function loadGroupMembers() {
+        const data = await (await fetch(`/messenger/group/${currentGroupId}/members`)).json();
+        const canManage = data.can_manage;
+
+        document.getElementById('add-members-btn').style.display = canManage ? 'block' : 'none';
+
+        document.getElementById('members-list').innerHTML = data.members.map(m => {
+            const roleIcon = m.role === 'owner' ? '<i class="fas fa-crown member-role-owner ml-1"></i>' : (m.role === 'admin' ? '<i class="fas fa-shield-alt member-role-admin ml-1"></i>' : '');
+            const clickHandler = canManage && m.role !== 'owner' && m.user_id !== currentUserId ? `onclick="showMemberRoleModal(${m.user_id}, '${m.user_full_name}', '${m.role}')"` : '';
+            return `<div class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 ${clickHandler ? 'cursor-pointer' : ''}" ${clickHandler}>
+            <img src="/static/${m.user_photo}" class="w-10 h-10 rounded-full object-cover">
+            <div class="flex-1">
+                <p class="font-medium text-gray-800">${m.user_full_name}${roleIcon}</p>
+                <p class="text-xs text-gray-500">${m.role === 'owner' ? 'Владелец' : (m.role === 'admin' ? 'Админ' : 'Участник')}</p>
+            </div>
+        </div>`;
+        }).join('');
+    }
+
+    function showAddMembersModal() {
+        selectedMembersToAdd = [];
+        document.getElementById('add-member-search').value = '';
+        document.getElementById('add-member-results').innerHTML = '';
+        document.getElementById('add-members-modal').classList.remove('hidden');
+        document.getElementById('add-members-modal').classList.add('flex');
+    }
+
+    function closeAddMembersModal() {
+        document.getElementById('add-members-modal').classList.add('hidden');
+        document.getElementById('add-members-modal').classList.remove('flex');
+    }
+
+    let addMemberSearchTimeout;
+    document.getElementById('add-member-search').oninput = e => {
+        clearTimeout(addMemberSearchTimeout);
+        const q = e.target.value.trim();
+        if (q.length < 2) { document.getElementById('add-member-results').innerHTML = ''; return; }
+        addMemberSearchTimeout = setTimeout(async () => {
+            const data = await (await fetch(`/messenger/users/search?q=${encodeURIComponent(q)}`)).json();
+            document.getElementById('add-member-results').innerHTML = data.users.map(u => {
+                const isSelected = selectedMembersToAdd.includes(u.id);
+                return `<div class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer ${isSelected ? 'bg-blue-50' : ''}" onclick="toggleMemberSelection(${u.id})">
+                <img src="/static/${u.photo}" class="w-10 h-10 rounded-full object-cover">
+                <div class="flex-1">
+                    <p class="font-medium text-gray-800">${u.full_name}</p>
+                    <p class="text-xs text-gray-500">${u.position}</p>
+                </div>
+                ${isSelected ? '<i class="fas fa-check text-blue-500"></i>' : ''}
+            </div>`;
+            }).join('') || '<div class="text-center text-gray-400 py-4">Не найдено</div>';
+        }, 300);
+    };
+
+    function toggleMemberSelection(userId) {
+        const idx = selectedMembersToAdd.indexOf(userId);
+        if (idx > -1) selectedMembersToAdd.splice(idx, 1);
+        else selectedMembersToAdd.push(userId);
+        document.getElementById('add-member-search').dispatchEvent(new Event('input'));
+    }
+
+    async function addSelectedMembers() {
+        if (!selectedMembersToAdd.length) return alert('Выберите пользователей');
+        await fetch(`/messenger/group/${currentGroupId}/members/add`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ user_ids: selectedMembersToAdd })
+        });
+        closeAddMembersModal();
+        loadGroupMembers();
+        const groupData = await (await fetch(`/messenger/group/${currentGroupId}`)).json();
+        currentGroupData = groupData.group;
+        document.getElementById('chat-user-position').textContent = `${currentGroupData.member_count} участников`;
+    }
+
+    function showMemberRoleModal(userId, name, role) {
+        targetMemberId = userId;
+        document.getElementById('member-role-name').textContent = name;
+        document.getElementById('member-role-modal').classList.remove('hidden');
+        document.getElementById('member-role-modal').classList.add('flex');
+    }
+
+    function closeMemberRoleModal() {
+        document.getElementById('member-role-modal').classList.add('hidden');
+        document.getElementById('member-role-modal').classList.remove('flex');
+    }
+
+    async function setMemberRole(role) {
+        await fetch(`/messenger/group/${currentGroupId}/members/${targetMemberId}/role`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ role })
+        });
+        closeMemberRoleModal();
+        loadGroupMembers();
+    }
+
+    async function removeMember() {
+        if (confirm('Удалить участника?')) {
+            await fetch(`/messenger/group/${currentGroupId}/members/${targetMemberId}/remove`, {
+                method: 'POST', headers: { 'X-CSRFToken': csrfToken }
+            });
+            closeMemberRoleModal();
+            loadGroupMembers();
+        }
+    }
+
+    // === Invite Link ===
+    async function loadInviteLink() {
+        const data = await (await fetch(`/messenger/group/${currentGroupId}/invite-link`)).json();
+        document.getElementById('invite-link-input').value = window.location.origin + data.full_url;
+        document.getElementById('toggle-invite-btn').innerHTML = data.enabled
+            ? '<i class="fas fa-ban mr-1"></i>Отключить'
+            : '<i class="fas fa-check mr-1"></i>Включить';
+        document.getElementById('toggle-invite-btn').className = data.enabled
+            ? 'flex-1 py-2 bg-yellow-100 text-yellow-700 rounded-xl hover:bg-yellow-200'
+            : 'flex-1 py-2 bg-green-100 text-green-700 rounded-xl hover:bg-green-200';
+    }
+
+    function copyInviteLink() {
+        navigator.clipboard.writeText(document.getElementById('invite-link-input').value);
+        alert('Ссылка скопирована');
+    }
+
+    async function regenerateInviteLink() {
+        if (confirm('Создать новую ссылку? Старая перестанет работать.')) {
+            const data = await (await fetch(`/messenger/group/${currentGroupId}/invite-link/regenerate`, {
+                method: 'POST', headers: { 'X-CSRFToken': csrfToken }
+            })).json();
+            document.getElementById('invite-link-input').value = window.location.origin + data.full_url;
+        }
+    }
+
+    async function toggleInviteLink() {
+        await fetch(`/messenger/group/${currentGroupId}/invite-link/toggle`, {
+            method: 'POST', headers: { 'X-CSRFToken': csrfToken }
+        });
+        loadInviteLink();
+    }
+
+    // === Chat Context Menu ===
+    function showChatContextMenu(e, chatId, isFavorites) {
+        if (isFavorites) return;
+        e.preventDefault(); e.stopPropagation(); contextChatId = chatId;
+        const menu = document.getElementById('chat-context-menu');
+        menu.style.left = Math.min(e.pageX, window.innerWidth - 180) + 'px';
+        menu.style.top = Math.min(e.pageY, window.innerHeight - 100) + 'px';
+        menu.classList.remove('hidden');
+    }
+
+    document.getElementById('chat-ctx-delete').onclick = async () => {
+        if (confirm('Удалить чат у себя?')) {
+            await fetch(`/messenger/chat/${contextChatId}/delete`, { method: 'POST', headers: { 'X-CSRFToken': csrfToken } });
+            if (contextChatId === currentChatId) { currentChatId = null; document.getElementById('active-chat').classList.add('hidden'); document.getElementById('empty-chat').classList.remove('hidden'); }
+            loadChats();
+        }
+    };
+
+    document.getElementById('chat-ctx-delete-all').onclick = async () => {
+        if (confirm('Удалить чат у всех участников?')) {
+            await fetch(`/messenger/chat/${contextChatId}/delete-all`, { method: 'POST', headers: { 'X-CSRFToken': csrfToken } });
+            if (contextChatId === currentChatId) { currentChatId = null; document.getElementById('active-chat').classList.add('hidden'); document.getElementById('empty-chat').classList.remove('hidden'); }
+            loadChats();
+        }
+    };
+
+    // === Search Users ===
+    let searchTimeout;
+    document.getElementById('user-search').oninput = e => {
+        clearTimeout(searchTimeout);
+        const q = e.target.value.trim();
+        if (q.length < 2) { document.getElementById('search-results').classList.add('hidden'); return; }
+        searchTimeout = setTimeout(async () => {
+            const data = await (await fetch(`/messenger/users/search?q=${encodeURIComponent(q)}`)).json();
+            const res = document.getElementById('search-results');
+            res.innerHTML = data.users.length ? data.users.map(u => `<div class="p-3 hover:bg-gray-50 cursor-pointer flex items-center space-x-3" onclick="startChatWith(${u.id})"><img src="/static/${u.photo}" class="w-10 h-10 rounded-full object-cover"><div><p class="font-medium">${u.full_name}</p><p class="text-sm text-gray-500">${u.position}</p></div></div>`).join('') : '<div class="p-4 text-gray-500 text-center">Не найдено</div>';
+            res.classList.remove('hidden');
+        }, 300);
+    };
+
+    document.addEventListener('click', e => { if (!e.target.closest('#user-search') && !e.target.closest('#search-results')) document.getElementById('search-results').classList.add('hidden'); });
+
+    async function startChatWith(userId) {
+        document.getElementById('search-results').classList.add('hidden');
+        document.getElementById('user-search').value = '';
+        const data = await (await fetch(`/messenger/chat/${userId}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })).json();
+        if (data.chat_id) openPrivateChat(data.chat_id);
+    }
+
+    // === Back Button & Misc ===
+    document.getElementById('back-to-list').onclick = () => {
+        document.getElementById('chat-sidebar').classList.remove('hidden');
+        document.getElementById('chat-area').classList.add('hidden');
+        document.getElementById('active-chat').classList.add('hidden');
+        document.getElementById('empty-chat').classList.remove('hidden');
+        currentChatId = null; currentGroupId = null; lastMessageId = 0;
+        if (messagePollingInterval) { clearInterval(messagePollingInterval); messagePollingInterval = null; }
+    };
+
+    document.getElementById('message-input').oninput = function () { this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 128) + 'px'; };
+
+    setInterval(() => loadChats(), 5000);
+
+    function showChatInfo() {
+        if (currentGroupId) showGroupSettings();
+    }
+</script>
+{% endblock %}

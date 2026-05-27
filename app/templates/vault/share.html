@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Предоставить доступ - {{ vault.title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <a href="{{ url_for('vault.view', id=vault.id) }}" class="text-blue-500 hover:text-blue-600 mb-4 inline-block">
+        <i class="fas fa-arrow-left mr-2"></i>Назад
+    </a>
+
+    <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">Предоставить доступ</h1>
+        <p class="text-gray-600">{{ vault.title }}</p>
+    </div>
+
+    <!-- Форма предоставления доступа -->
+    <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Добавить пользователя</h2>
+        <form method="POST" action="{{ url_for('vault.share', id=vault.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Пользователь</label>
+                <select name="user_id" required
+                    class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">Выберите пользователя</option>
+                    {% for user in users %}
+                    <option value="{{ user.id }}">{{ user.full_name }} ({{ user.username }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-3">Права доступа</label>
+                <div class="space-y-2">
+                    <label class="flex items-center">
+                        <input type="checkbox" name="can_read" checked
+                            class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                        <span class="ml-2 text-gray-700">
+                            <i class="fas fa-eye text-blue-500 w-5"></i> Просмотр
+                        </span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" name="can_edit"
+                            class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                        <span class="ml-2 text-gray-700">
+                            <i class="fas fa-edit text-green-500 w-5"></i> Редактирование
+                        </span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" name="can_delete"
+                            class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                        <span class="ml-2 text-gray-700">
+                            <i class="fas fa-trash text-red-500 w-5"></i> Удаление
+                        </span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" name="can_share"
+                            class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                        <span class="ml-2 text-gray-700">
+                            <i class="fas fa-share-alt text-purple-500 w-5"></i> Предоставление доступа
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <button type="submit"
+                class="w-full px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors">
+                <i class="fas fa-plus mr-2"></i>Предоставить доступ
+            </button>
+        </form>
+    </div>
+
+    <!-- Список пользователей с доступом -->
+    {% if permissions %}
+    <div class="bg-white rounded-2xl shadow-sm p-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Пользователи с доступом</h2>
+        <div class="space-y-3">
+            {% for perm in permissions %}
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                <div class="flex-1">
+                    <div class="font-medium text-gray-800">{{ perm.user.full_name }}</div>
+                    <div class="text-sm text-gray-500">{{ perm.user.username }}</div>
+                    <div class="flex flex-wrap gap-2 mt-2">
+                        {% if perm.can_read %}
+                        <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
+                            <i class="fas fa-eye"></i> Просмотр
+                        </span>
+                        {% endif %}
+                        {% if perm.can_edit %}
+                        <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
+                            <i class="fas fa-edit"></i> Редактирование
+                        </span>
+                        {% endif %}
+                        {% if perm.can_delete %}
+                        <span class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">
+                            <i class="fas fa-trash"></i> Удаление
+                        </span>
+                        {% endif %}
+                        {% if perm.can_share %}
+                        <span class="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">
+                            <i class="fas fa-share-alt"></i> Предоставление
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="text-xs text-gray-400 mt-1">
+                        Предоставлено: {{ perm.granted_at.strftime('%d.%m.%Y %H:%M') }}
+                        {% if perm.granted_by %}
+                        пользователем {{ perm.granted_by.short_name }}
+                        {% endif %}
+                    </div>
+                </div>
+                <form method="POST" action="{{ url_for('vault.revoke', id=vault.id, user_id=perm.user_id) }}"
+                    onsubmit="return confirm('Отозвать доступ у {{ perm.user.full_name }}?')" class="ml-4">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-white rounded-2xl shadow-sm p-12 text-center">
+        <i class="fas fa-users text-4xl text-gray-300 mb-4"></i>
+        <p class="text-gray-500">Доступ пока никому не предоставлен</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

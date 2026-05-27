@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Оформление пропуска | Корпоративный портал{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 max-w-2xl">
+    <a href="{{ url_for('main.index') }}" class="inline-flex items-center text-blue-500 hover:text-blue-600 mb-4">
+        <i class="fas fa-arrow-left mr-2"></i>На главную
+    </a>
+
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-800 flex items-center">
+            <i class="fas fa-id-card text-blue-500 mr-3"></i>
+            Оформление пропуска
+        </h1>
+        <p class="text-gray-600 mt-1">Заполните форму для оформления временного пропуска</p>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <form method="POST" class="p-6 space-y-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <!-- Visitor Info -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    ФИО посетителя <span class="text-red-500">*</span>
+                </label>
+                <input type="text" name="visitor_name" required placeholder="Иванов Иван Иванович"
+                    class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Компания</label>
+                    <input type="text" name="visitor_company" placeholder="Название компании"
+                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Документ</label>
+                    <input type="text" name="visitor_document" placeholder="Серия и номер паспорта"
+                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none">
+                </div>
+            </div>
+
+            <!-- Dates -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Дата визита <span class="text-red-500">*</span>
+                    </label>
+                    <input type="date" name="visit_date" required
+                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Дата окончания</label>
+                    <input type="date" name="visit_end_date"
+                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none">
+                </div>
+            </div>
+
+            <!-- Host -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Принимающий сотрудник</label>
+                <select name="host_id"
+                    class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none">
+                    <option value="">Выберите сотрудника</option>
+                    {% for employee in users %}
+                    <option value="{{ employee.id }}">{{ employee.full_name }} - {{ employee.position }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Purpose -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Цель визита</label>
+                <textarea name="purpose" rows="3" placeholder="Опишите цель визита..."
+                    class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none resize-none"></textarea>
+            </div>
+
+            <!-- Info -->
+            <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                <div class="flex items-start space-x-3">
+                    <i class="fas fa-info-circle text-yellow-500 mt-0.5"></i>
+                    <div class="text-sm text-yellow-800">
+                        <p class="font-medium mb-1">Обратите внимание</p>
+                        <p>После отправки заявки ожидайте подтверждения от службы безопасности. Обычно это занимает до
+                            24 часов.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit -->
+            <button type="submit"
+                class="w-full py-4 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 transition-colors flex items-center justify-center space-x-2">
+                <i class="fas fa-paper-plane"></i>
+                <span>Отправить заявку</span>
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

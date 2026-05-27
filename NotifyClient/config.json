@@ -1,0 +1,18 @@
+{
+    "portalUrl": "http://192.168.19.183",
+    "checkInterval": 60000,
+    "greetings": {
+        "morning": {
+            "hour": 10,
+            "minute": 0
+        },
+        "afternoon": {
+            "hour": 12,
+            "minute": 0
+        },
+        "evening": {
+            "hour": 18,
+            "minute": 20
+        }
+    }
+}

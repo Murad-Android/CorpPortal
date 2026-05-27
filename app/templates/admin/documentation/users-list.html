@@ -1,0 +1,104 @@
+<div class="doc-section" data-section-id="users-list">
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">Список пользователей</h1>
+
+    <p><strong>Путь:</strong> Админ-панель → Пользователи → Список пользователей</p>
+
+    <h2>Обзор</h2>
+    <p>Раздел для просмотра и управления всеми пользователями системы. Здесь вы можете искать пользователей, фильтровать
+        по различным критериям и выполнять массовые операции.</p>
+
+    <h2>Основные функции</h2>
+
+    <h3>Поиск пользователей</h3>
+    <p>Используйте поле поиска для быстрого нахождения пользователя по:</p>
+    <ul class="list-disc list-inside space-y-2 ml-4">
+        <li>ФИО</li>
+        <li>Email</li>
+        <li>Логину (username)</li>
+        <li>Должности</li>
+        <li>Отделу</li>
+    </ul>
+
+    <h3>Фильтрация</h3>
+    <p>Доступные фильтры:</p>
+    <ul class="list-disc list-inside space-y-2 ml-4">
+        <li><strong>По роли:</strong> admin, hr, secretary, user, и пользовательские роли</li>
+        <li><strong>По статусу:</strong> активные / неактивные</li>
+        <li><strong>По отделу:</strong> выбор из списка отделов</li>
+        <li><strong>По типу:</strong> локальные / LDAP пользователи</li>
+    </ul>
+
+    <h3>Столбцы таблицы</h3>
+    <table class="min-w-full border border-gray-200 mt-4">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-4 py-2 border-b text-left">Столбец</th>
+                <th class="px-4 py-2 border-b text-left">Описание</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="px-4 py-2 border-b">Фото</td>
+                <td class="px-4 py-2 border-b">Аватар пользователя</td>
+            </tr>
+            <tr>
+                <td class="px-4 py-2 border-b">ФИО</td>
+                <td class="px-4 py-2 border-b">Полное имя пользователя</td>
+            </tr>
+            <tr>
+                <td class="px-4 py-2 border-b">Email</td>
+                <td class="px-4 py-2 border-b">Электронная почта</td>
+            </tr>
+            <tr>
+                <td class="px-4 py-2 border-b">Должность</td>
+                <td class="px-4 py-2 border-b">Текущая должность</td>
+            </tr>
+            <tr>
+                <td class="px-4 py-2 border-b">Отдел</td>
+                <td class="px-4 py-2 border-b">Подразделение</td>
+            </tr>
+            <tr>
+                <td class="px-4 py-2 border-b">Роль</td>
+                <td class="px-4 py-2 border-b">Роль в системе</td>
+            </tr>
+            <tr>
+                <td class="px-4 py-2 border-b">Статус</td>
+                <td class="px-4 py-2 border-b">Активен / Неактивен</td>
+            </tr>
+            <tr>
+                <td class="px-4 py-2 border-b">Последний вход</td>
+                <td class="px-4 py-2 border-b">Дата последнего входа в систему</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Действия с пользователем</h3>
+    <p>Для каждого пользователя доступны действия:</p>
+    <ul class="list-disc list-inside space-y-2 ml-4">
+        <li><strong>Редактировать</strong> - изменение данных пользователя</li>
+        <li><strong>Сбросить пароль</strong> - генерация нового пароля</li>
+        <li><strong>Деактивировать</strong> - блокировка доступа</li>
+        <li><strong>Удалить</strong> - полное удаление (требует подтверждения)</li>
+    </ul>
+
+    <h3>Массовые операции</h3>
+    <p>Выберите несколько пользователей (чекбоксы) для выполнения массовых операций:</p>
+    <ul class="list-disc list-inside space-y-2 ml-4">
+        <li>Экспорт в Excel</li>
+        <li>Массовая деактивация</li>
+        <li>Массовое изменение роли</li>
+        <li>Отправка уведомления</li>
+    </ul>
+
+    <h2>Экспорт данных</h2>
+    <p>Нажмите кнопку "Экспорт" для выгрузки списка пользователей:</p>
+    <ul class="list-disc list-inside space-y-2 ml-4">
+        <li><strong>Excel (.xlsx)</strong> - с форматированием и фильтрами</li>
+        <li><strong>CSV (.csv)</strong> - для импорта в другие системы</li>
+        <li><strong>PDF (.pdf)</strong> - для печати</li>
+    </ul>
+
+    <div class="info-box info">
+        <p><strong>Совет:</strong> Используйте фильтры перед экспортом, чтобы выгрузить только нужных пользователей.</p>
+    </div>
+</div>

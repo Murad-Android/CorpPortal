@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}{{ article.title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <a href="{{ url_for('security.index') }}" class="text-blue-500 hover:text-blue-600 mb-4 inline-block">
+        <i class="fas fa-arrow-left mr-2"></i>Назад
+    </a>
+
+    <div class="bg-white rounded-2xl shadow-sm p-6 md:p-8">
+        <div class="flex items-center space-x-4 mb-6">
+            <div class="w-14 h-14 rounded-xl flex items-center justify-center
+                {% if article.priority == 'critical' %}bg-red-100 text-red-600
+                {% elif article.priority == 'warning' %}bg-yellow-100 text-yellow-600
+                {% elif article.priority == 'success' %}bg-green-100 text-green-600
+                {% else %}bg-blue-100 text-blue-600{% endif %}">
+                <i class="fas fa-{{ article.icon or 'shield-alt' }} text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">{{ article.title }}</h1>
+                <p class="text-sm text-gray-500">{{ article.created_at.strftime('%d.%m.%Y') }}</p>
+            </div>
+        </div>
+
+        {% if article.short_description %}
+        <p class="text-lg text-gray-600 mb-6 pb-6 border-b">{{ article.short_description }}</p>
+        {% endif %}
+
+        <div class="prose max-w-none text-gray-700 leading-relaxed">
+            {{ article.content|safe }}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,255 @@
+{% extends "admin/base.html" %}
+{% block title %}Обновление сервера{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">Обновление сервера</h1>
+
+    {% if not pending %}
+    <!-- Шаг 1: Загрузка и проверка -->
+    <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+        <h2 class="text-lg font-semibold mb-4">Шаг 1: Загрузить и проверить</h2>
+        <p class="text-sm text-gray-500 mb-4">Загрузите ZIP-архив. Файлы будут проанализированы, но не применены.</p>
+        <form method="POST" action="{{ url_for('server_update.upload') }}" enctype="multipart/form-data"
+            id="uploadForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div id="dropZone"
+                class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition"
+                onclick="document.getElementById('fileInput').click()">
+                <i class="fa-solid fa-cloud-upload-alt text-4xl text-gray-300 mb-3" id="dropIcon"></i>
+                <p class="text-gray-500 font-medium" id="dropText">Перетащите ZIP-файл сюда или нажмите для выбора</p>
+                <p class="text-xs text-gray-400 mt-1">ZIP-архив из build_release.py</p>
+                <input type="file" name="update_file" id="fileInput" accept=".zip" required class="hidden">
+            </div>
+
+            <div id="fileInfo"
+                class="hidden mt-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-file-zipper text-green-600"></i>
+                    <span id="fileName" class="text-sm font-medium text-green-700"></span>
+                    <span id="fileSize" class="text-xs text-green-500"></span>
+                </div>
+                <button type="button" onclick="clearFile()" class="text-gray-400 hover:text-red-500">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <button type="submit" id="uploadBtn" disabled
+                class="mt-4 px-6 py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fa-solid fa-magnifying-glass mr-1"></i> Проверить обновление
+            </button>
+        </form>
+    </div>
+
+    {% else %}
+    <!-- Шаг 2: Предварительный просмотр и применение -->
+    <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold">Результат проверки</h2>
+            <span class="text-xs text-gray-400">{{ pending.checked_at }}</span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+            <div class="bg-blue-50 rounded-lg p-3 text-center">
+                <div class="text-2xl font-bold text-blue-700">{{ pending.total_files }}</div>
+                <div class="text-xs text-blue-500">Всего в архиве</div>
+            </div>
+            <div class="bg-green-50 rounded-lg p-3 text-center">
+                <div class="text-2xl font-bold text-green-700">{{ pending.new_files|length }}</div>
+                <div class="text-xs text-green-500">Новых</div>
+            </div>
+            <div class="bg-yellow-50 rounded-lg p-3 text-center">
+                <div class="text-2xl font-bold text-yellow-700">{{ pending.modified_files|length }}</div>
+                <div class="text-xs text-yellow-500">Изменённых</div>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-3 text-center">
+                <div class="text-2xl font-bold text-gray-500">{{ pending.unchanged }}</div>
+                <div class="text-xs text-gray-400">Без изменений</div>
+            </div>
+        </div>
+
+        {% if pending.new_files %}
+        <details class="mb-3">
+            <summary class="cursor-pointer text-sm font-medium text-green-700 hover:text-green-900">
+                Новые файлы ({{ pending.new_files|length }})
+            </summary>
+            <div class="mt-2 max-h-48 overflow-y-auto bg-gray-50 rounded-lg p-3">
+                {% for f in pending.new_files %}
+                <div class="text-xs font-mono text-gray-600 py-0.5">+ {{ f }}</div>
+                {% endfor %}
+            </div>
+        </details>
+        {% endif %}
+
+        {% if pending.modified_files %}
+        <details class="mb-3">
+            <summary class="cursor-pointer text-sm font-medium text-yellow-700 hover:text-yellow-900">
+                Изменённые файлы ({{ pending.modified_files|length }})
+            </summary>
+            <div class="mt-2 max-h-48 overflow-y-auto bg-gray-50 rounded-lg p-3">
+                {% for f in pending.modified_files %}
+                <div class="text-xs font-mono text-gray-600 py-0.5">~ {{ f }}</div>
+                {% endfor %}
+            </div>
+        </details>
+        {% endif %}
+
+        {% if pending.skipped %}
+        <details class="mb-3">
+            <summary class="cursor-pointer text-sm font-medium text-gray-500 hover:text-gray-700">
+                Пропущено ({{ pending.skipped|length }})
+            </summary>
+            <div class="mt-2 max-h-32 overflow-y-auto bg-gray-50 rounded-lg p-3">
+                {% for f in pending.skipped %}
+                <div class="text-xs font-mono text-gray-400 py-0.5">- {{ f }}</div>
+                {% endfor %}
+            </div>
+        </details>
+        {% endif %}
+
+        <!-- Действия -->
+        <div class="flex flex-wrap items-center gap-3 mt-5 pt-4 border-t border-gray-100">
+            <form method="POST" action="{{ url_for('server_update.apply') }}" class="flex items-center gap-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="text" name="version" placeholder="Версия (v2.1)"
+                    class="px-3 py-2 border border-gray-200 rounded-lg text-sm w-32">
+                <button type="submit"
+                    class="px-5 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition"
+                    onclick="return confirm('Применить обновление и перезапустить сервер?')">
+                    <i class="fa-solid fa-rocket mr-1"></i> Применить и перезапустить
+                </button>
+            </form>
+            <form method="POST" action="{{ url_for('server_update.cancel') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit"
+                    class="px-5 py-2 bg-gray-100 text-gray-600 rounded-lg font-medium hover:bg-gray-200 transition">
+                    <i class="fa-solid fa-xmark mr-1"></i> Отменить
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Ручной перезапуск -->
+    <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-lg font-semibold">Перезапуск сервера</h2>
+                <p class="text-sm text-gray-500">Перезапустить без обновления файлов</p>
+            </div>
+            <button type="button" onclick="restartServer()"
+                class="px-5 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition">
+                <i class="fa-solid fa-rotate mr-1"></i> Перезапустить
+            </button>
+        </div>
+    </div>
+
+    <!-- Лог обновлений -->
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100">
+            <h2 class="text-lg font-semibold">История обновлений</h2>
+        </div>
+        <table class="w-full">
+            <thead>
+                <tr class="bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase">
+                    <th class="px-4 py-3">Дата</th>
+                    <th class="px-4 py-3">Версия</th>
+                    <th class="px-4 py-3">Файлов</th>
+                    <th class="px-4 py-3">Статус</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr class="border-t border-gray-100">
+                    <td class="px-4 py-3 text-sm">{{ log.applied_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                    <td class="px-4 py-3 font-mono text-sm">{{ log.version }}</td>
+                    <td class="px-4 py-3 text-sm">{{ log.files_updated }}</td>
+                    <td class="px-4 py-3">
+                        {% if log.status == 'success' %}
+                        <span
+                            class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">OK</span>
+                        {% else %}
+                        <span
+                            class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">Ошибка</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not logs %}
+                <tr>
+                    <td colspan="4" class="px-4 py-6 text-center text-gray-400">Обновлений пока не было</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+
+    if (dropZone) {
+        ['dragenter', 'dragover'].forEach(evt => {
+            dropZone.addEventListener(evt, (e) => {
+                e.preventDefault();
+                dropZone.classList.add('border-indigo-500', 'bg-indigo-50');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(evt => {
+            dropZone.addEventListener(evt, (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-indigo-500', 'bg-indigo-50');
+            });
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].name.endsWith('.zip')) {
+                fileInput.files = files;
+                showFile(files[0]);
+            } else {
+                alert('Допускаются только ZIP-файлы');
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) showFile(fileInput.files[0]);
+        });
+    }
+
+    function showFile(file) {
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileSize').textContent = '(' + (file.size / 1024 / 1024).toFixed(2) + ' MB)';
+        document.getElementById('fileInfo').classList.remove('hidden');
+        document.getElementById('uploadBtn').disabled = false;
+        document.getElementById('dropIcon').className = 'fa-solid fa-file-zipper text-4xl text-green-500 mb-3';
+        document.getElementById('dropText').textContent = 'Файл выбран';
+    }
+
+    function clearFile() {
+        fileInput.value = '';
+        document.getElementById('fileInfo').classList.add('hidden');
+        document.getElementById('uploadBtn').disabled = true;
+        document.getElementById('dropIcon').className = 'fa-solid fa-cloud-upload-alt text-4xl text-gray-300 mb-3';
+        document.getElementById('dropText').textContent = 'Перетащите ZIP-файл сюда или нажмите для выбора';
+    }
+
+    function restartServer() {
+        if (!confirm('Перезапустить сервер? Портал будет недоступен несколько секунд.')) return;
+        fetch('{{ url_for("server_update.restart") }}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
+        })
+            .then(() => {
+                alert('Сервер перезапускается. Страница обновится через 10 секунд.');
+                setTimeout(() => location.reload(), 10000);
+            })
+            .catch(() => {
+                alert('Запрос отправлен. Подождите 10 секунд и обновите страницу.');
+                setTimeout(() => location.reload(), 10000);
+            });
+    }
+</script>
+{% endblock %}

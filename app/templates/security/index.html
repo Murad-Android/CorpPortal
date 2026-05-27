@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Центр безопасности{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <a href="{{ url_for('main.index') }}" class="inline-flex items-center text-blue-500 hover:text-blue-600 mb-4">
+        <i class="fas fa-arrow-left mr-2"></i>На главную
+    </a>
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">Центр безопасности</h1>
+
+    <div class="grid gap-4 md:grid-cols-2">
+        {% for article in articles.items %}
+        <a href="{{ url_for('security.detail', id=article.id) }}"
+            class="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-shadow">
+            <div class="flex items-start space-x-4">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0
+                    {% if article.priority == 'critical' %}bg-red-100 text-red-600
+                    {% elif article.priority == 'warning' %}bg-yellow-100 text-yellow-600
+                    {% elif article.priority == 'success' %}bg-green-100 text-green-600
+                    {% else %}bg-blue-100 text-blue-600{% endif %}">
+                    <i class="fas fa-{{ article.icon or 'shield-alt' }} text-xl"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h2 class="font-semibold text-gray-800 mb-1">{{ article.title }}</h2>
+                    {% if article.short_description %}
+                    <p class="text-sm text-gray-600 line-clamp-2">{{ article.short_description }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+        {% else %}
+        <div class="col-span-2 bg-white rounded-2xl shadow-sm p-12 text-center">
+            <i class="fas fa-shield-alt text-4xl text-gray-300 mb-4"></i>
+            <p class="text-gray-500">Статей пока нет</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

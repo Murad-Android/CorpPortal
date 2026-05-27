@@ -1,0 +1,76 @@
+{# Шаблон одного комментария (рекурсивный) #}
+<div class="comment" id="comment-{{ comment.id }}">
+    <div class="flex gap-3">
+        <div class="w-10 h-10 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+            <img src="{{ url_for('static', filename=comment.user.photo|user_photo) }}" alt=""
+                class="w-full h-full object-cover">
+        </div>
+        <div class="flex-1 min-w-0">
+            <div class="bg-gray-50 rounded-xl p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <a href="{{ url_for('staff.detail', id=comment.user.id) }}"
+                            class="font-medium text-gray-900 hover:text-blue-600">
+                            {{ comment.user.full_name }}
+                        </a>
+                        <span class="text-xs text-gray-500">{{ comment.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                        {% if comment.updated_at and comment.updated_at != comment.created_at %}
+                        <span class="text-xs text-gray-400">(изменён)</span>
+                        {% endif %}
+                    </div>
+
+                    {% if not comment.is_deleted %}
+                    <div class="flex items-center gap-1">
+                        {% if comment.user_id == current_user.id %}
+                        <button
+                            onclick="showEditModal({{ comment.id }}, '{{ comment.content|replace("'", "\\'")|replace("
+                            \n", "\\n" ) }}')"
+                            class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                            title="Редактировать">
+                            <i class="fas fa-edit text-sm"></i>
+                        </button>
+                        {% endif %}
+                        {% if comment.can_delete(current_user) %}
+                        <form method="POST" action="{{ url_for('news.delete_comment', id=comment.id) }}"
+                            onsubmit="return confirm('Удалить комментарий?')" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit"
+                                class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                                title="Удалить">
+                                <i class="fas fa-trash text-sm"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div
+                    class="text-gray-700 whitespace-pre-wrap break-words {% if comment.is_deleted %}italic text-gray-400{% endif %}">
+                    {{ comment.content }}</div>
+            </div>
+
+            {% if not comment.is_deleted %}
+            <div class="mt-2 ml-2">
+                <button
+                    onclick="showReplyModal({{ comment.id }}, '{{ comment.user.full_name|replace("'", "\\'") }}', '{{ comment.content[:100]|replace("'", "\\'")|replace("
+                    \n", " " ) }}')" class="text-sm text-gray-500 hover:text-blue-600">
+                    <i class="fas fa-reply mr-1"></i> Ответить
+                </button>
+            </div>
+            {% endif %}
+
+            {# Ответы на комментарий #}
+            {% set replies = comment.get_replies() %}
+            {% if replies %}
+            <div class="mt-4 ml-4 pl-4 border-l-2 border-gray-200 space-y-4">
+                {% for reply in replies %}
+                {% with comment=reply %}
+                {% include "news/_comment.html" %}
+                {% endwith %}
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
